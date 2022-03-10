@@ -1,9 +1,14 @@
 import "../layers/fully-connected"
 
--- entry: dense_fwd
+module fcs = fully_connected_simple f64
+
+-- ==
+-- entry: fully_connected_fwd
 -- input {[1.0, 2.0, 3.0, 4.0]
 --
---        [1.0,  2.0,  3.0,  4.0]
+--        [[1.0,  2.0,  3.0,  4.0],
+--         [5.0,  6.0,  7.0,  8.0],
+--         [9.0, 10.0, 11.0, 12.0]]
 --
 --         [1.0, 2.0, 3.0]}
 --
@@ -11,7 +16,9 @@ import "../layers/fully-connected"
 --
 -- input {[2.0, 3.0, 4.0, 5.0]
 --
---        [5.0,  6.0,  7.0,  8.0]
+--        [[1.0,  2.0,  3.0,  4.0],
+--         [5.0,  6.0,  7.0,  8.0],
+--         [9.0, 10.0, 11.0, 12.0]]
 --
 --         [1.0, 2.0, 3.0]}
 --
@@ -19,12 +26,14 @@ import "../layers/fully-connected"
 -- 
 -- input {[3.0, 4.0, 5.0, 6.0]
 --
---        [9.0, 10.0, 11.0, 12.0]
+--        [[1.0,  2.0,  3.0,  4.0],
+--         [5.0,  6.0,  7.0,  8.0],
+--         [9.0, 10.0, 11.0, 12.0]]
 --
 --         [1.0, 2.0, 3.0]}
 --
 -- output {[ 51.0, 124.0, 197.0]}
 
 entry fully_connected_fwd [n] (input: [n]f64) w b =
-  let (_, output) = fully_connected.forward input w b
+  let output = fcs.forward input w b (\x -> x)
   in output

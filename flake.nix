@@ -7,6 +7,7 @@
     outputs = { futhark, nixpkgs, flake-utils, ... }: 
     flake-utils.lib.eachDefaultSystem (system: {
         devShell = import ./shell.nix {
+            inherit system;
             pkgs = nixpkgs.legacyPackages.${system};
             futhark = futhark;
         };
