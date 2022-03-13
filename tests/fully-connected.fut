@@ -3,7 +3,7 @@ import "../layers/fully-connected"
 module fcs = fully_connected_simple f64
 
 -- ==
--- entry: fully_connected_fwd
+-- entry: fully_connected_simple_fwd
 -- input {[1.0, 2.0, 3.0, 4.0]
 --
 --        [[1.0,  2.0,  3.0,  4.0],
@@ -34,6 +34,6 @@ module fcs = fully_connected_simple f64
 --
 -- output {[ 51.0, 124.0, 197.0]}
 
-entry fully_connected_fwd [n] (input: [n]f64) w b =
+entry fully_connected_simple_fwd [n] (input: [n]f64) w b =
   let output = fcs.forward input w b (\x -> x)
   in output
