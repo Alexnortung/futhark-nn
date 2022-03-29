@@ -1,14 +1,14 @@
 module pooling (R:real) = {
-  --type t = R.t
-  type t = f64
+  type t = R.t
+  -- type t = f64
   let arg_max [m] [n] (input: [m][n]t) : t =
     -- flatten the slice to one dimensional
     let flat = flatten input
     -- compare and find greatest element
-    in reduce (\acc x ->
+    in R.(reduce (\acc x ->
       if acc > x
       then acc
-      else x) flat[0] flat
+      else x) flat[0] flat)
 
   let max_pool [k] [m] [n]
     (input: [k][m][n]t)
