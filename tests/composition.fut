@@ -40,7 +40,8 @@ module fcs = fully_connected_simple f64
 --     [1353.0, 2563.0, 2389.0]]
 -- }
 
-let my_flatten [k] [m] [n] (input: [k][m][n]f64) (mn: i64) : [k][mn]f64 =
+let my_flatten [k] [m] [n] (input: [k][m][n]f64) : [k][]f64 =
+  let mn = m * n
   let iots = iota mn
   let batches = iota k
   in map (\b ->
@@ -55,6 +56,6 @@ entry composition_test [k] [m] [n] [w1x] [w1y] [m3] [n3] (input: [k][m][n]f64) (
   let batches = iota k
   let out = myconv.forward input b1 w1
   let out = mypool.forward out outx2 outy2
-  let out = (my_flatten out (outx2 * outy2)) :> [k][m3]f64
+  let out = (my_flatten out) :> [k][m3]f64
   let out = fcs.forward out (\x -> x) w3 b3
   in out
