@@ -22,4 +22,4 @@ module mypool = pooling f64
 --         ]}
 
 entry max_pooling [k] (input: [k][][]f64) : [k][][]f64 =
-  mypool.max_pool input 2 2
+  mypool.forward input 2 2

@@ -10,7 +10,7 @@ module pooling (R:real) = {
       then acc
       else x) flat[0] flat)
 
-  let max_pool [k] [m] [n]
+  let forward [k] [m] [n]
     (input: [k][m][n]t)
     (output_m: i64)
     (output_n: i64) : [k][output_m][output_n]t =
