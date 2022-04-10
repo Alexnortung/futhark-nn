@@ -33,5 +33,4 @@ module fully_connected_simple (R:real) = {
   --     let vector = grad weights biases
   --     let learning_vector = map (\x -> x * alpha) vector
 
-
 }
