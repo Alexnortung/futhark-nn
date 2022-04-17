@@ -3,7 +3,7 @@ import "../layers/pooling"
 module mypool = pooling f64
 
 -- ==
--- entry: max_pooling
+-- entry: max_pooling_2d
 -- input { [
 --         [[1.0,  2.0,  3.0,  4.0],
 --          [5.0, 26.0, 27.0,  8.0],
@@ -21,5 +21,29 @@ module mypool = pooling f64
 --          [ 10.0, 12.0 ]]
 --         ]}
 
-entry max_pooling [k] (input: [k][][]f64) : [k][][]f64 =
-  mypool.forward input 2 2
+entry max_pooling_2d [k] (input: [k][][]f64) : [k][][]f64 =
+  mypool.forward_2d input 2 2
+
+-- ==
+-- entry: max_pooling_2d_layer
+-- input { [
+--         [[1.0,  2.0,  3.0,  4.0],
+--          [5.0, 26.0, 27.0,  8.0],
+--          [5.0, 16.0,  7.0,  8.0],
+--          [9.0, 10.0, 91.0, 12.0]],
+--         [[1.0,  2.0,  3.0,  4.0],
+--          [5.0,  6.0,  7.0,  8.0],
+--          [5.0,  6.0,  7.0,  8.0],
+--          [9.0, 10.0, 11.0, 12.0]]] }
+--
+-- output {[
+--         [[ 26.0, 27.0 ],
+--          [ 16.0, 91.0 ]],
+--         [[ 6.0, 8.0 ],
+--          [ 10.0, 12.0 ]]
+--         ]}
+
+entry max_pooling_2d_layer [k] [m] [n] (input: [k][m][n]f64) : [k][][]f64 =
+  let layer = mypool.init_2d 2 2
+  let output = mypool.forward_layer_2d layer input
+  in output

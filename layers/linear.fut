@@ -5,6 +5,8 @@ import "types"
 module linear (R:real) = {
   type t = R.t
   type weights_type [m] [n] = [n][m]t
+  type input_type [k] [m] = [k][m]t
+  type output_type [k] [n] = [k][n]t
   type bias_type [n] = [n]t
   type weights_and_bias [m] [n] = (weights_type [m] [n], bias_type [n])
   -- type layer_type [k] [m] [n] ((weights_and_bias m n) -> [k][n]t, weights_and_bias m n)
@@ -15,11 +17,11 @@ module linear (R:real) = {
   module wi = weight_init R
 
   let forward  [k] [m] [n] -- k batches, m input nodes and n output nodes
-    (input: [k][m]t) -- the values of the input nodes
+    (input: input_type [k] [m]) -- the values of the input nodes
     (activation_func: t -> t)
-    (weights: [n][m]t)
-    (biases: [n]t)
-    : [k][n]t =
+    (weights: weights_type [m] [n])
+    (biases: bias_type [n])
+    : output_type [k] [n] =
       -- TODO: use matmul instead of map matvecmul_row
       map (\input ->
         let propagated = lalg.matvecmul_row weights input
@@ -30,13 +32,13 @@ module linear (R:real) = {
         in activated
       ) input
 
-  let forward_layer [k] [m] [n] (layer: linear_layer_type [k] [m] [n]) (input: [k][m]t) : [k][n]t =
+  let forward_layer [k] [m] [n] (layer: linear_layer_type [k] [m] [n]) (input: input_type [k] [m]) : output_type [k] [n] =
     -- take the forward function (layer.0) and apply the input and the weights + bias (layer.1)
     let output = layer.0 input layer.1
     in output
 
   let backward [k] [m] [n]
-    (forward_weights: [k][m]t -> (weights_and_bias [m] [n]) -> [k][n]t)
+    (forward_weights: (input_type [k] [m]) -> (weights_and_bias [m] [n]) -> (output_type [k] [n]))
     (learning_rate: t)
     ((current_weights, current_bias): weights_and_bias [m] [n])
     ((gradient_weights, gradient_bias): weights_and_bias [m] [n])
