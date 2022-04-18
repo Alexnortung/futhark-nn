@@ -1,2 +1,3 @@
 -- types from layer.init
-type^ layer_type 'fi 'wb 'out = (fi -> wb -> out, wb)
+type^ layer_fwd_type 'options 'layer_input 'wb '~out = options -> layer_input -> wb -> out
+type^ layer_type 'options 'layer_input 'wb '~out = (layer_fwd_type options layer_input wb out, options, wb)

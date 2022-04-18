@@ -1,14 +1,24 @@
 import "../lib/github.com/diku-dk/linalg/linalg"
+import "../util/weight-initialization"
+import "types"
 
 module convolutional (R:real) = {
   type t = R.t
 
+  type options = ()
+  type batch_2d [k] [m] [n] = [k][m][n]t
+  type kernel_2d [a] [b] = [a][b]t
+  type weight_bias_2d [a] [b] = (kernel_2d [a] [b], t)
+  type^ layer_type_2d [k] [m] [n] [a] [b] [out_m] [out_n] = layer_type (options) (batch_2d [k] [m] [n]) (weight_bias_2d [a] [b]) ([k][out_m][out_n]t)
+
   module lalg   = mk_linalg R
+
+  module wi = weight_init R
   
-  let forward [k] [m] [n] [a] [b] -- k batches, m times n input nodes and a times b filter size
-    (input: [k][m][n]t)
+  let forward_2d [k] [m] [n] [a] [b] -- k batches, m times n input nodes and a times b filter size
+    (input: batch_2d [k] [m] [n])
     (bias: t)
-    (filter_weights: [a][b]t) : [k][][]t =
+    (filter_weights: kernel_2d [a] [b]) : [k][][]t =
       let xs = 0...(m - a)
       let ys = 0...(n - b)
       let c = a * b
@@ -25,4 +35,34 @@ module convolutional (R:real) = {
           ) ys
         ) xs
       ) input
+
+  let new_forward [k] [m] [n] [a] [b] _ (input: batch_2d [k] [m] [n]) (wb: weight_bias_2d [a] [b]) : [k][][]t =
+    let (kernel, bias) = wb
+    in forward_2d input bias kernel
+
+  let init_2d [k] [m] [n] (kernel_x: i64) (kernel_y: i64) (seed: i32) : (() -> [k][m][n]t -> ([kernel_x][kernel_y]R.t, R.t) -> ?[out_m][out_n].[k][out_m][out_n]R.t, (), ([kernel_x][kernel_y]R.t, R.t)) =
+    let weights = wi.gen_2d kernel_y kernel_x seed
+    let bias_max = kernel_x + kernel_y
+    let bias_max : t = R.(i64 bias_max)
+    let bias = wi.gen_num (R.(neg bias_max), bias_max) seed
+    --let new_forward = new_forward :> () -> batch_2d [k] [m] [n] -> weight_bias_2d [kernel_x] [kernel_y] -> [k][][]t
+    in (new_forward, (), (weights, bias))
+
+  let set_bias [k] [m] [n] [a] [b]
+    (layer: (() -> [k][m][n]t -> ([a][b]R.t, R.t) -> ?[out_m][out_n].[k][out_m][out_n]R.t, (), ([a][b]R.t, R.t)))
+    (bias: t)
+    : (() -> [k][m][n]t -> ([a][b]R.t, R.t) -> ?[out_m][out_n].[k][out_m][out_n]R.t, (), ([a][b]R.t, R.t)) =
+      let (f, options, (weights, _)) = layer
+      in (f, options, (weights, bias))
+
+  let set_weights [k] [m] [n] [a] [b]
+    (layer: (() -> [k][m][n]t -> ([a][b]R.t, R.t) -> ?[out_m][out_n].[k][out_m][out_n]R.t, (), ([a][b]R.t, R.t)))
+    (weights: kernel_2d [a] [b])
+    : (() -> [k][m][n]t -> ([a][b]R.t, R.t) -> ?[out_m][out_n].[k][out_m][out_n]R.t, (), ([a][b]R.t, R.t)) =
+      let (f, options, (_, bias)) = layer
+      in (f, options, (weights, bias))
+
+  let forward_layer (layer) (input) =
+    let (f, options, wb) = layer
+    in f options input wb
 }
