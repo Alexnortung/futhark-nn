@@ -9,7 +9,9 @@ module convolutional (R:real) = {
   type batch_2d [k] [m] [n] = [k][m][n]t
   type kernel_2d [a] [b] = [a][b]t
   type weight_bias_2d [a] [b] = (kernel_2d [a] [b], t)
-  type^ layer_type_2d [k] [m] [n] [a] [b] [out_m] [out_n] = layer_type (options) (batch_2d [k] [m] [n]) (weight_bias_2d [a] [b]) ([k][out_m][out_n]t)
+  -- TODO: this works, but should be cleaner
+  type^ layer_type_2d [k] [m] [n] [a] [b] = (options -> batch_2d [k] [m] [n] -> weight_bias_2d [a] [b] -> ?[out_m][out_n].[k][out_m][out_n]t , options, weight_bias_2d [a] [b])
+  -- type^ layer_type_2d [k] [m] [n] [a] [b] '~out = layer_type (options) (batch_2d [k] [m] [n]) (weight_bias_2d [a] [b]) (out)
 
   module lalg   = mk_linalg R
 
@@ -40,7 +42,7 @@ module convolutional (R:real) = {
     let (kernel, bias) = wb
     in forward_2d input bias kernel
 
-  let init_2d [k] [m] [n] (kernel_x: i64) (kernel_y: i64) (seed: i32) : (() -> [k][m][n]t -> ([kernel_x][kernel_y]R.t, R.t) -> ?[out_m][out_n].[k][out_m][out_n]R.t, (), ([kernel_x][kernel_y]R.t, R.t)) =
+  let init_2d [k] [m] [n] (kernel_x: i64) (kernel_y: i64) (seed: i32) : layer_type_2d [k] [m] [n] [kernel_x] [kernel_y] =
     let weights = wi.gen_2d kernel_y kernel_x seed
     let bias_max = kernel_x + kernel_y
     let bias_max : t = R.(i64 bias_max)
@@ -49,16 +51,18 @@ module convolutional (R:real) = {
     in (new_forward, (), (weights, bias))
 
   let set_bias [k] [m] [n] [a] [b]
-    (layer: (() -> [k][m][n]t -> ([a][b]R.t, R.t) -> ?[out_m][out_n].[k][out_m][out_n]R.t, (), ([a][b]R.t, R.t)))
+    (layer: layer_type_2d [k] [m] [n] [a] [b])
     (bias: t)
-    : (() -> [k][m][n]t -> ([a][b]R.t, R.t) -> ?[out_m][out_n].[k][out_m][out_n]R.t, (), ([a][b]R.t, R.t)) =
+    : layer_type_2d [k] [m] [n] [a] [b] =
       let (f, options, (weights, _)) = layer
       in (f, options, (weights, bias))
 
   let set_weights [k] [m] [n] [a] [b]
-    (layer: (() -> [k][m][n]t -> ([a][b]R.t, R.t) -> ?[out_m][out_n].[k][out_m][out_n]R.t, (), ([a][b]R.t, R.t)))
+    -- (layer: (() -> [k][m][n]t -> ([a][b]R.t, R.t) -> ?[out_m][out_n].[k][out_m][out_n]R.t, (), ([a][b]R.t, R.t)))
+    -- (layer: (layer_type_2d [k] [m] [n] [a] [b] (?[out_m][out_n].[k][out_m][out_n]t)))
+    (layer: layer_type_2d [k] [m] [n] [a] [b])
     (weights: kernel_2d [a] [b])
-    : (() -> [k][m][n]t -> ([a][b]R.t, R.t) -> ?[out_m][out_n].[k][out_m][out_n]R.t, (), ([a][b]R.t, R.t)) =
+    : layer_type_2d [k] [m] [n] [a] [b] =
       let (f, options, (_, bias)) = layer
       in (f, options, (weights, bias))
 
