@@ -47,7 +47,6 @@ module convolutional (R:real) = {
     let bias_max = kernel_x + kernel_y
     let bias_max : t = R.(i64 bias_max)
     let bias = wi.gen_num (R.(neg bias_max), bias_max) seed
-    --let new_forward = new_forward :> () -> batch_2d [k] [m] [n] -> weight_bias_2d [kernel_x] [kernel_y] -> [k][][]t
     in (new_forward, (), (weights, bias))
 
   let set_bias [k] [m] [n] [a] [b]
@@ -58,8 +57,6 @@ module convolutional (R:real) = {
       in (f, options, (weights, bias))
 
   let set_weights [k] [m] [n] [a] [b]
-    -- (layer: (() -> [k][m][n]t -> ([a][b]R.t, R.t) -> ?[out_m][out_n].[k][out_m][out_n]R.t, (), ([a][b]R.t, R.t)))
-    -- (layer: (layer_type_2d [k] [m] [n] [a] [b] (?[out_m][out_n].[k][out_m][out_n]t)))
     (layer: layer_type_2d [k] [m] [n] [a] [b])
     (weights: kernel_2d [a] [b])
     : layer_type_2d [k] [m] [n] [a] [b] =
