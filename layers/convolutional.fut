@@ -11,6 +11,7 @@ module convolutional (R:real) = {
   type weight_bias_2d [a] [b] = (kernel_2d [a] [b], t)
   -- TODO: this works, but should be cleaner
   type^ layer_type_2d [k] [m] [n] [a] [b] = (options -> batch_2d [k] [m] [n] -> weight_bias_2d [a] [b] -> ?[out_m][out_n].[k][out_m][out_n]t , options, weight_bias_2d [a] [b])
+  type^ layer_type_2d_known [k] [m] [n] [a] [b] [out_m] [out_n] = (options -> batch_2d [k] [m] [n] -> weight_bias_2d [a] [b] -> [k][out_m][out_n]t , options, weight_bias_2d [a] [b])
   -- type^ layer_type_2d [k] [m] [n] [a] [b] '~out = layer_type (options) (batch_2d [k] [m] [n]) (weight_bias_2d [a] [b]) (out)
 
   module lalg   = mk_linalg R
@@ -68,12 +69,19 @@ module convolutional (R:real) = {
     let bias = wi.gen_num (R.(neg bias_max), bias_max) seed
     in (weights, bias)
 
-  let new_forward [k] [m] [n] [a] [b] _ (input: batch_2d [k] [m] [n]) (wb: weight_bias_2d [a] [b]) : [k][][]t =
+  let new_forward [k] [m] [n] [a] [b] (_options) (input: batch_2d [k] [m] [n]) (wb: weight_bias_2d [a] [b]) : [k][][]t =
     let (kernel, bias) = wb
     in forward_2d input bias kernel
 
   let init_2d [k] [m] [n] (kernel_x: i64) (kernel_y: i64) (seed: i32) : layer_type_2d [k] [m] [n] [kernel_x] [kernel_y] =
     (new_forward, (), generate_weights_2d seed kernel_x kernel_y)
+
+  let new_forward_known [k] [m] [n] [a] [b] (output_m: i64) (output_n: i64) (_options) (input: batch_2d [k] [m] [n]) (wb: weight_bias_2d [a] [b]) : [k][][]t =
+    let (kernel, bias) = wb
+    in forward_2d_known output_m output_n input bias kernel
+
+  let init_2d_known [k] [m] [n] (output_m: i64) (output_n: i64) (kernel_x: i64) (kernel_y: i64) (seed: i32) : layer_type_2d_known [k] [m] [n] [kernel_x] [kernel_y] [output_m] [output_n] =
+    (new_forward_known output_m output_n, (), generate_weights_2d seed kernel_x kernel_y)
 
   let set_bias [k] [m] [n] [a] [b]
     (layer: layer_type_2d [k] [m] [n] [a] [b])
