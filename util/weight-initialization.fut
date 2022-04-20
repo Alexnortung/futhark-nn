@@ -19,8 +19,8 @@ module weight_init (R: real) = {
     let d = R.(((sqrt((i32 6)) / sqrt(i64 n))) )
     in map (\_ -> gen_num (R.(neg d),d) seed) (iota n)
 
-  let gen_2d (m: i64) (n: i64) (seed: i32) : [n][m]t =
+  let gen_2d (m: i64) (n: i64) (seed: i32) : [m][n]t =
     map (\_ ->
-      gen_1d m seed
-    ) (iota n)
+      gen_1d n seed
+    ) (iota m)
 }
