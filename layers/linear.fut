@@ -9,9 +9,10 @@ module linear (R:real) = {
   type output_type [k] [n] = [k][n]t
   type bias_type [n] = [n]t
   type weights_and_bias [m] [n] = (weights_type [m] [n], bias_type [n])
+  type options = ()
   -- type layer_type [k] [m] [n] ((weights_and_bias m n) -> [k][n]t, weights_and_bias m n)
   type^ linear_layer_fwd [k] [m] [n] = layer_fwd_type () (input_type [k] [m]) (weights_and_bias [m] [n]) (output_type [k] [n])
-  type^ linear_layer_type [k] [m] [n] = layer_type () (input_type [k] [m]) (weights_and_bias [m] [n]) (output_type [k] [n])
+  type^ linear_layer_type [k] [m] [n] = layer_type options (input_type [k] [m]) (weights_and_bias [m] [n]) (i64) (output_type [k] [n])
 
   module lalg = mk_linalg R
 
@@ -35,16 +36,15 @@ module linear (R:real) = {
 
   let forward_layer [k] [m] [n] (layer: linear_layer_type [k] [m] [n]) (input: input_type [k] [m]) : output_type [k] [n] =
     -- take the forward function (layer.0) and apply the input and the weights + bias (layer.1)
-    let (function, options, wb) = layer
-    let output = function options input wb
+    let { forward, options, weights, shape = _ } = layer
+    let output = forward options input weights
     in output
 
-  let backward [k] [m] [n]
-    (forward_weights: linear_layer_fwd [k] [m] [n])
+  let backward [m] [n]
     (learning_rate: t)
     ((current_weights, current_bias): weights_and_bias [m] [n])
     ((gradient_weights, gradient_bias): weights_and_bias [m] [n])
-    : linear_layer_type [k] [m] [n] =
+    : weights_and_bias [m] [n] =
       let new_weights = map2 (\cw gw ->
         map2 (\cw gw ->
           R.(cw - learning_rate * gw)
@@ -54,23 +54,28 @@ module linear (R:real) = {
       let new_bias = map2 (\cb gb ->
         R.(cb - learning_rate * gb)
       ) current_bias gradient_bias
-      in (forward_weights, (), (new_weights, new_bias))
+      in (new_weights, new_bias)
     
 
   let init [k] (m: i64) (n: i64) (activation_func: t -> t) (seed: i32) : linear_layer_type [k] [m] [n] =
-    let weights = wi.gen_2d m n seed
+    let weights = wi.gen_2d n m seed
     let biases = wi.gen_1d n seed
     -- make a function that represents the forward function, but only needs an input
     let forward_weights = (\_ input (weights, biases) -> forward input activation_func weights biases)
-    in (forward_weights, (), (weights, biases))
+    in {
+      forward = forward_weights,
+      weights = (weights, biases),
+      options = (),
+      shape = n
+    }
 
   let set_weights [k] [m] [n] (layer: linear_layer_type [k] [m] [n]) (new_weights: weights_type [m] [n]) : linear_layer_type [k] [m] [n] =
-    let (fwd, options, (_, biases)) = layer
-    let new_layer = (fwd, options, (new_weights, biases))
+    let { forward, options, shape, weights = (_, biases) } = layer
+    let new_layer = { forward, options, shape, weights = (new_weights, biases) }
     in new_layer
 
   let set_bias [k] [m] [n] (layer: linear_layer_type [k] [m] [n]) (new_bias: bias_type [n]) : linear_layer_type [k] [m] [n] =
-    let (fwd, options,  (weights, _)) = layer
-    let new_layer = (fwd, options, (weights, new_bias))
+    let { forward, options, shape, weights = (weights, _) } = layer
+    let new_layer = { forward, options, shape, weights = (weights, new_bias) }
     in new_layer
 }

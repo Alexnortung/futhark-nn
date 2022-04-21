@@ -25,8 +25,8 @@ module myconv = convolutional f64
 --         ]
 -- }
 
-entry conv [k] (input: [k][][]f64) (bias: f64) (weights: [][]f64) : [k][][]f64 =
-  myconv.forward_2d input bias weights
+entry conv [k] (input: [k][3][3]f64) (bias: f64) (weights: [2][2]f64) : [k][2][2]f64 =
+  myconv.forward_2d 2 2 input bias weights
 
 
 -- ==
@@ -53,7 +53,7 @@ entry conv [k] (input: [k][][]f64) (bias: f64) (weights: [][]f64) : [k][][]f64 =
 -- }
 
 entry conv_layer [k] [a] [b] (input: [k][][]f64) (bias: f64) (weights: [a][b]f64) : [k][][]f64 =
-  let layer = myconv.init_2d a b 1
-  let layer = myconv.set_bias layer bias
-  let layer = myconv.set_weights layer weights
-  in myconv.forward_layer layer input
+  myconv.init_2d 2 2 a b 1
+    |> myconv.set_bias bias
+    |> myconv.set_weights weights
+    |> myconv.forward_layer input
