@@ -37,7 +37,7 @@ module neural_network (R:real) = {
     let output_n = shape.1 - kernel_n + 1
     in (output_m, output_n)
 
-  def n_conv_2d 'input_type  'prev_current_weight 'prev_rest_weight 'current_weight
+  def conv_2d 'input_type  'prev_current_weight 'prev_rest_weight 'current_weight
     [k] [prev_m] [prev_n]
     (output_m: i64)
     (output_n: i64)
@@ -56,7 +56,6 @@ module neural_network (R:real) = {
         weights = (layer_weights, weights),
         forward = new_forward
       }
-  def conv_2d = uncurry n_conv_2d
 
   def forward 'input_type 'all_shapes 'output 'cw 'rw (input: input_type) (network: nn_type all_shapes input_type output cw rw) =
     let { weights, forward, seed = _, shape = _ } = network
