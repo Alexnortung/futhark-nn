@@ -47,7 +47,7 @@ module neural_network (R:real) = {
     : nn_type shape_2d input_type ([k][output_m][output_n]t) ([kernel_m][kernel_n]t, t) (prev_current_weight, prev_rest_weight)
     =
       let { shape = _, weights, forward, seed } = network
-      let layer = conv.init_2d_known output_m output_n kernel_m kernel_n seed
+      let layer = conv.init_2d output_m output_n kernel_m kernel_n seed
       let (layer_forward, layer_options, layer_weights) = layer
       let new_forward = compose_forward forward (layer_forward layer_options)
       in {
