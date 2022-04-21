@@ -22,7 +22,7 @@ module mypool = pooling f64
 --         ]}
 
 entry max_pooling_2d [k] (input: [k][][]f64) : [k][][]f64 =
-  mypool.forward_2d input 2 2
+  mypool.forward_2d 2 2 input
 
 -- ==
 -- entry: max_pooling_2d_layer
@@ -44,6 +44,5 @@ entry max_pooling_2d [k] (input: [k][][]f64) : [k][][]f64 =
 --         ]}
 
 entry max_pooling_2d_layer [k] [m] [n] (input: [k][m][n]f64) : [k][][]f64 =
-  let layer = mypool.init_2d 2 2
-  let output = mypool.forward_layer_2d layer input
-  in output
+  mypool.init_2d 2 2
+    |> mypool.forward_layer input

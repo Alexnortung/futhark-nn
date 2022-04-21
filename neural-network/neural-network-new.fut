@@ -1,8 +1,9 @@
 import "../layers/convolutional"
+import "../layers/linear"
 
 module neural_network (R:real) = {
   type t = R.t
-  type shape_1d = (i64)
+  type shape_1d = i64
   type shape_2d = (i64, i64)
   type shape_3d = (i64, i64, i64)
   type^ nn_type 'shape_type 'input 'output 'current_weight 'rest_weights = {
@@ -13,6 +14,7 @@ module neural_network (R:real) = {
   }
 
   module conv = convolutional R
+  module lin = linear R
 
   def compose_forward 'input_type 'prev_wbs 'layer_input 'current_wbs 'output
     (prev_forward: input_type -> prev_wbs -> layer_input)
@@ -23,11 +25,21 @@ module neural_network (R:real) = {
       let prev_result = prev_forward input prev_wbs
       in layer_forward prev_result current_wb
 
+  def init_forward (x) _ = x
+
+  def init_1d [k] (n: i64) (seed: i32) : nn_type shape_1d ([k][n]t) ([k][n]t) () () =
+    {
+      seed,
+      shape = n,
+      forward = init_forward,
+      weights = ((), ())
+    }
+
   def init_2d [k] (m: i64) (n: i64) (seed: i32) : nn_type shape_2d ([k][m][n]t) ([k][m][n]t) () () =
     {
       seed,
       shape = (m, n),
-      forward = (\x _ -> x),
+      forward = init_forward,
       weights = ((), ())
     }
 
@@ -48,11 +60,29 @@ module neural_network (R:real) = {
     =
       let { shape = _, weights, forward, seed } = network
       let layer = conv.init_2d output_m output_n kernel_m kernel_n seed
-      let (layer_forward, layer_options, layer_weights) = layer
+      let { forward = layer_forward, options = layer_options, weights = layer_weights} = layer
       let new_forward = compose_forward forward (layer_forward layer_options)
       in {
         seed,
         shape = (output_m, output_n),
+        weights = (layer_weights, weights),
+        forward = new_forward
+      }
+
+  def linear 'rest_weights 'input_type 'prev_current_weight 'prev_rest_weight
+    [k] [m]
+    -- (m: i64)
+    (n: i64)
+    (activation: t -> t)
+    (network: nn_type shape_1d input_type (lin.input_type [k] [m]) prev_current_weight prev_rest_weight)
+    : nn_type shape_1d input_type (lin.output_type [k] [n]) (lin.weights_and_bias [m] [n]) (prev_current_weight, prev_rest_weight) =
+      let { shape = _, weights, forward, seed } = network
+      let layer = lin.init m n activation seed
+      let { forward = layer_forward, options = layer_options, weights = layer_weights} = layer
+      let new_forward = compose_forward forward (layer_forward layer_options)
+      in {
+        seed,
+        shape = (n),
         weights = (layer_weights, weights),
         forward = new_forward
       }

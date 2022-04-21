@@ -40,22 +40,21 @@ module linear (R:real) = {
     let output = forward options input weights
     in output
 
-  -- let backward [k] [m] [n]
-  --   (forward_weights: linear_layer_fwd [k] [m] [n])
-  --   (learning_rate: t)
-  --   ((current_weights, current_bias): weights_and_bias [m] [n])
-  --   ((gradient_weights, gradient_bias): weights_and_bias [m] [n])
-  --   : linear_layer_type [k] [m] [n] =
-  --     let new_weights = map2 (\cw gw ->
-  --       map2 (\cw gw ->
-  --         R.(cw - learning_rate * gw)
-  --       ) cw gw
-  --     ) current_weights gradient_weights
-  --
-  --     let new_bias = map2 (\cb gb ->
-  --       R.(cb - learning_rate * gb)
-  --     ) current_bias gradient_bias
-  --     in (forward_weights, (), (new_weights, new_bias))
+  let backward [m] [n]
+    (learning_rate: t)
+    ((current_weights, current_bias): weights_and_bias [m] [n])
+    ((gradient_weights, gradient_bias): weights_and_bias [m] [n])
+    : weights_and_bias [m] [n] =
+      let new_weights = map2 (\cw gw ->
+        map2 (\cw gw ->
+          R.(cw - learning_rate * gw)
+        ) cw gw
+      ) current_weights gradient_weights
+
+      let new_bias = map2 (\cb gb ->
+        R.(cb - learning_rate * gb)
+      ) current_bias gradient_bias
+      in (new_weights, new_bias)
     
 
   let init [k] (m: i64) (n: i64) (activation_func: t -> t) (seed: i32) : linear_layer_type [k] [m] [n] =

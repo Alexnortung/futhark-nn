@@ -1,4 +1,5 @@
 import "../neural-network/neural-network-new"
+import "../util/activation-func"
 module nn = neural_network f64
 
 -- ==
@@ -23,3 +24,18 @@ entry nn_test [k] (input: [k][6][5]f64) =
   let shape = nn.conv_2d_shape 3 2 n
   let n = nn.conv_2d shape.0 shape.1 3 2 n
   in nn.forward input n
+
+-- ==
+-- entry: nn_test
+-- input {
+--    [[1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0]]
+-- }
+-- output {
+--    [[-18.80553453580382f64]]
+-- }
+entry nn_linear_test [k] (input: [k][]f64) =
+  nn.init_1d 7 1
+    |> nn.linear 5 (identity)
+    |> nn.linear 6 (identity)
+    |> nn.linear 1 (identity)
+    |> nn.forward input
