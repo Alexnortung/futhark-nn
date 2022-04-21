@@ -1,5 +1,6 @@
 import "../layers/convolutional"
 import "../layers/linear"
+import "../layers/pooling"
 
 module neural_network (R:real) = {
   type t = R.t
@@ -15,6 +16,7 @@ module neural_network (R:real) = {
 
   module conv = convolutional R
   module lin = linear R
+  module mpool = pooling R
 
   def compose_forward 'input_type 'prev_wbs 'layer_input 'current_wbs 'output
     (prev_forward: input_type -> prev_wbs -> layer_input)
@@ -87,19 +89,30 @@ module neural_network (R:real) = {
         forward = new_forward
       }
 
+  def maxpool_2d_shape 'input 'output 'cw 'rw (window_m: i64) (window_n: i64) (network: nn_type shape_2d input output cw rw) : shape_2d =
+    let (m, n) = network.shape
+    in (m / window_m, n / window_n)
+
+  def maxpool_2d 'input_type  'prev_current_weight 'prev_rest_weight 'current_weight
+    [k] [prev_m] [prev_n]
+    (output_m: i64)
+    (output_n: i64)
+    (network: nn_type shape_2d input_type ([k][prev_m][prev_n]t) prev_current_weight prev_rest_weight)
+    : nn_type shape_2d input_type ([k][output_m][output_n]t) () (prev_current_weight, prev_rest_weight)
+    =
+      let { shape = _, weights, forward, seed } = network
+      let layer = mpool.init_2d output_m output_n
+      let { forward = layer_forward, options = layer_options, weights = layer_weights} = layer
+      let new_forward = compose_forward forward (layer_forward layer_options)
+      in {
+        seed,
+        shape = (output_m, output_n),
+        weights = (layer_weights, weights),
+        forward = new_forward
+      }
+
   def forward 'input_type 'all_shapes 'output 'cw 'rw (input: input_type) (network: nn_type all_shapes input_type output cw rw) =
     let { weights, forward, seed = _, shape = _ } = network
     in forward input weights
 
 }
-
--- local def model [k] [m] [n] 't (state) (input: [k][m][n]t) (weights) =
---   nn.init_2d state input weights
---   |> nn.conv_2d 3 2
---   -- |> nn.maxpool_2d 2 2
---   -- |> nn.from_2d_to_1d
---   -- |> nn.linear 1
---
--- local entry simple_test (input) =
---   let weights = neural_network.gen_weights model input
---
