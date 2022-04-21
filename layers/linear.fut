@@ -12,7 +12,7 @@ module linear (R:real) = {
   type options = ()
   -- type layer_type [k] [m] [n] ((weights_and_bias m n) -> [k][n]t, weights_and_bias m n)
   type^ linear_layer_fwd [k] [m] [n] = layer_fwd_type () (input_type [k] [m]) (weights_and_bias [m] [n]) (output_type [k] [n])
-  type^ linear_layer_type [k] [m] [n] = layer_type options (input_type [k] [m]) (weights_and_bias [m] [n]) (output_type [k] [n])
+  type^ linear_layer_type [k] [m] [n] = layer_type options (input_type [k] [m]) (weights_and_bias [m] [n]) (i64) (output_type [k] [n])
 
   module lalg = mk_linalg R
 
@@ -36,7 +36,7 @@ module linear (R:real) = {
 
   let forward_layer [k] [m] [n] (layer: linear_layer_type [k] [m] [n]) (input: input_type [k] [m]) : output_type [k] [n] =
     -- take the forward function (layer.0) and apply the input and the weights + bias (layer.1)
-    let { forward, options, weights } = layer
+    let { forward, options, weights, shape = _ } = layer
     let output = forward options input weights
     in output
 
@@ -65,16 +65,17 @@ module linear (R:real) = {
     in {
       forward = forward_weights,
       weights = (weights, biases),
-      options = ()
+      options = (),
+      shape = n
     }
 
   let set_weights [k] [m] [n] (layer: linear_layer_type [k] [m] [n]) (new_weights: weights_type [m] [n]) : linear_layer_type [k] [m] [n] =
-    let { forward, options, weights = (_, biases) } = layer
-    let new_layer = { forward, options, weights = (new_weights, biases) }
+    let { forward, options, shape, weights = (_, biases) } = layer
+    let new_layer = { forward, options, shape, weights = (new_weights, biases) }
     in new_layer
 
   let set_bias [k] [m] [n] (layer: linear_layer_type [k] [m] [n]) (new_bias: bias_type [n]) : linear_layer_type [k] [m] [n] =
-    let { forward, options, weights = (weights, _) } = layer
-    let new_layer = { forward, options, weights = (weights, new_bias) }
+    let { forward, options, shape, weights = (weights, _) } = layer
+    let new_layer = { forward, options, shape, weights = (weights, new_bias) }
     in new_layer
 }

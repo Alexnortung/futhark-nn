@@ -11,7 +11,7 @@ module pooling (R:real) = {
 
   type options_type = ()
   type options_2d = options_type
-  type^ layer_type_2d [k] [m] [n] [out_m] [out_n] = layer_type options_2d (batch_2d [k] [m] [n]) () ([k][out_m][out_n]t)
+  type^ layer_type_2d [k] [m] [n] [out_m] [out_n] = layer_type options_2d (batch_2d [k] [m] [n]) () (i64, i64) ([k][out_m][out_n]t)
 
   -- type t = f64
   let arg_max_1d [n] (input: input_1d [n]) : t =
@@ -75,10 +75,10 @@ module pooling (R:real) = {
   let init_2d [k] [m] [n] (output_m: i64) (output_n: i64) : layer_type_2d [k] [m] [n] [output_m] [output_n] =
     -- let output_m = m / window_width
     -- let output_n = n / window_height
-    { forward = layer_new_forward_2d output_m output_n, options = (), weights = () }
+    { forward = layer_new_forward_2d output_m output_n, options = (), weights = (), shape = (output_m, output_n) }
 
   let forward_layer (input) (layer) =
-    let { forward, options, weights } = layer
+    let { forward, options, weights, shape = _ } = layer
     in forward options input weights
 
 }

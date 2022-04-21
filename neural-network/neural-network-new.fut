@@ -1,18 +1,10 @@
 import "../layers/convolutional"
 import "../layers/linear"
 import "../layers/pooling"
+import "../layers/types"
 
 module neural_network (R:real) = {
   type t = R.t
-  type shape_1d = i64
-  type shape_2d = (i64, i64)
-  type shape_3d = (i64, i64, i64)
-  type^ nn_type 'shape_type 'input 'output 'current_weight 'rest_weights = {
-    seed: i32,
-    shape: shape_type,
-    forward: input -> (current_weight, rest_weights) -> output,
-    weights: (current_weight, rest_weights)
-  }
 
   module conv = convolutional R
   module lin = linear R
@@ -45,6 +37,20 @@ module neural_network (R:real) = {
       weights = ((), ())
     }
 
+  def add_layer 'nn_input 'l_input 'l_options  'l_wb 'l_shape 'l_out 'nn_shape 'prev_current_weight 'prev_rest_weight
+    (layer: layer_type l_options l_input l_wb l_shape l_out)
+    (network: nn_type nn_shape nn_input l_input prev_current_weight prev_rest_weight)
+    : nn_type l_shape nn_input l_out l_wb (prev_current_weight, prev_rest_weight) =
+    let { forward = layer_forward, options = layer_options, weights = layer_weights, shape = layer_shape } = layer
+    let { shape = _, weights, forward, seed } = network
+    let new_forward = compose_forward forward (layer_forward layer_options)
+    in {
+      seed,
+      shape = layer_shape,
+      weights = (layer_weights, weights),
+      forward = new_forward
+    }
+
   def conv_2d_shape 'input 'output 'cw 'rw (kernel_m: i64) (kernel_n: i64) (network: nn_type shape_2d input output cw rw) : shape_2d =
     let shape = network.shape
     let output_m = shape.0 - kernel_m + 1
@@ -62,7 +68,7 @@ module neural_network (R:real) = {
     =
       let { shape = _, weights, forward, seed } = network
       let layer = conv.init_2d output_m output_n kernel_m kernel_n seed
-      let { forward = layer_forward, options = layer_options, weights = layer_weights} = layer
+      let { forward = layer_forward, options = layer_options, weights = layer_weights, shape = _} = layer
       let new_forward = compose_forward forward (layer_forward layer_options)
       in {
         seed,
@@ -80,7 +86,7 @@ module neural_network (R:real) = {
     : nn_type shape_1d input_type (lin.output_type [k] [n]) (lin.weights_and_bias [m] [n]) (prev_current_weight, prev_rest_weight) =
       let { shape = _, weights, forward, seed } = network
       let layer = lin.init m n activation seed
-      let { forward = layer_forward, options = layer_options, weights = layer_weights} = layer
+      let { forward = layer_forward, options = layer_options, weights = layer_weights, shape = _} = layer
       let new_forward = compose_forward forward (layer_forward layer_options)
       in {
         seed,
@@ -102,7 +108,7 @@ module neural_network (R:real) = {
     =
       let { shape = _, weights, forward, seed } = network
       let layer = mpool.init_2d output_m output_n
-      let { forward = layer_forward, options = layer_options, weights = layer_weights} = layer
+      let { forward = layer_forward, options = layer_options, weights = layer_weights, shape = _ } = layer
       let new_forward = compose_forward forward (layer_forward layer_options)
       in {
         seed,

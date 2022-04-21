@@ -1,5 +1,7 @@
 import "../neural-network/neural-network-new"
 import "../util/activation-func"
+import "../layers/convolutional"
+
 module nn = neural_network f64
 
 -- ==
@@ -74,3 +76,34 @@ entry nn_maxpool_2d_test (input: [][][]f64) =
   let shape = nn.maxpool_2d_shape 2 1 n
   in nn.maxpool_2d shape.0 shape.1 n
     |> nn.forward input
+
+-- ==
+-- entry: nn_add_layer_test
+-- input {[
+--        [[ 1.0, 2.0, 3.0],
+--         [10.0, 9.0, 8.0],
+--         [ 4.0, 5.0, 6.0]],
+--        [[ 1.0, 2.0, 3.0],
+--         [10.0, 9.0, 8.0],
+--         [ 4.0, 5.0, 7.0]]]
+--
+--        3.0
+--      
+--        [[1.0, 3.0],
+--         [2.0, 9.0]]
+-- }
+-- output {[
+--         [[111.0, 104.0],
+--          [ 93.0, 100.0]],
+--         [[111.0, 104.0],
+--          [ 93.0, 109.0]]
+--         ]
+-- }
+
+entry nn_add_layer_test (input: [][][]f64 ) (b1: f64) (w1: [][]f64) =
+  let seed = 1
+  in nn.init_2d 3 3 seed
+  |> nn.add_layer (nn.conv.init_2d 2 2 2 2 seed
+                   |> nn.conv.set_weights w1
+                   |> nn.conv.set_bias b1)
+  |> nn.forward input
