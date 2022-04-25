@@ -1,6 +1,7 @@
 import "../layers/convolutional"
 import "../layers/linear"
 import "../layers/pooling"
+import "../layers/dimension"
 import "../layers/types"
 
 module neural_network (R:real) = {
@@ -9,6 +10,7 @@ module neural_network (R:real) = {
   module conv = convolutional R
   module lin = linear R
   module mpool = pooling R
+  module dimension = dimension
 
   def compose_forward 'input_type 'prev_wbs 'layer_input 'current_wbs 'output
     (prev_forward: input_type -> prev_wbs -> layer_input)
@@ -116,6 +118,23 @@ module neural_network (R:real) = {
         weights = (layer_weights, weights),
         forward = new_forward
       }
+
+  -- def from_1d_2d (output_m) (output_n) (network) =
+  --   let layer = dimension.from_1d_2d output_m output_n
+  --   in add_layer layer network
+  --
+  -- def from_1d_3d (output_l) (output_m) (output_n) (network) =
+  --   let layer = dimension.from_1d_3d output_l output_m output_n
+  --   in add_layer layer network
+  --
+  -- def from_2d_1d (network) =
+  --   let layer = dimension.from_2d_1d
+  --   in add_layer layer network
+  --
+  -- def from_3d_1d (network) =
+  --   let (l, m, n) = network.shape
+  --   let layer = dimension.from_3d_1d (l * m * n)
+  --   in add_layer layer network
 
   def forward 'input_type 'all_shapes 'output 'cw 'rw (input: input_type) (network: nn_type all_shapes input_type output cw rw) =
     let { weights, forward, seed = _, shape = _ } = network

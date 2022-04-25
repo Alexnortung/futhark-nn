@@ -8,20 +8,43 @@ module convolutional (R:real) = {
   type options 'stride = {
     stride: stride
   }
-  type options_2d = options (i64, i64)
+  type options_1d = options (shape_1d)
+  type options_2d = options (shape_2d)
+  type batch_1d [k] [n] = [k][n]t
   type batch_2d [k] [m] [n] = [k][m][n]t
+  type kernel_1d [a] = [a]t
   type kernel_2d [a] [b] = [a][b]t
+  type weight_bias_1d [a] = (kernel_1d [a], t)
   type weight_bias_2d [a] [b] = (kernel_2d [a] [b], t)
   -- TODO: this works, but should be cleaner
+  type^ layer_type_1d [k] [n] [a] [out_n] = layer_type (options_1d) (batch_1d [k] [n]) (weight_bias_1d [a]) (shape_1d) (batch_1d [k] [out_n])
   type^ layer_type_2d [k] [m] [n] [a] [b] [out_m] [out_n] = layer_type (options_2d) (batch_2d [k] [m] [n]) (weight_bias_2d [a] [b]) (i64, i64) (batch_2d [k] [out_m] [out_n])
 
   module lalg   = mk_linalg R
 
   module wi = weight_init R
 
+  let default_options_1d : options_1d = {
+    stride = 1
+  }
   let default_options_2d : options_2d = {
     stride = (1, 1)
   }
+
+  let forward_1d [k] [n] [a]
+    (output_n: i64)
+    (input: batch_1d [k] [n])
+    (bias: t)
+    (filter_weights: kernel_1d [a]) : batch_1d [k] [output_n] =
+      let xs = iota output_n
+      in
+      map (\input ->
+        map (\x ->
+          let slice = input[x:x+a] :> [a]t
+          let dotted = lalg.dotprod slice filter_weights
+          in R.(dotted + bias)
+        ) xs
+      ) input
 
   let forward_2d [k] [m] [n] [a] [b] -- k batches, m times n input nodes and a times b filter size
     (output_m: i64)
@@ -46,6 +69,12 @@ module convolutional (R:real) = {
         ) xs
       ) input
 
+  let generate_weights_1d (seed: i32) (a: i64) : weight_bias_1d [a] =
+    let weights = wi.gen_1d a seed
+    let bias_max : t = R.(i64 a)
+    let bias = wi.gen_num (R.(neg bias_max), bias_max) seed
+    in (weights, bias)
+
   let generate_weights_2d (seed: i32) (a: i64) (b: i64) : weight_bias_2d [a] [b] =
     let weights = wi.gen_2d a b seed
     let bias_max = a + b
@@ -53,9 +82,19 @@ module convolutional (R:real) = {
     let bias = wi.gen_num (R.(neg bias_max), bias_max) seed
     in (weights, bias)
 
+  let layer_new_forward_1d [k] [n] [a] (output_n: i64) (_options) (input: batch_1d [k] [n]) (wb: weight_bias_1d [a]) : batch_1d [k] [output_n] =
+    let (kernel, bias) = wb
+    in forward_1d output_n input bias kernel
+
   let layer_new_forward_2d [k] [m] [n] [a] [b] (output_m: i64) (output_n: i64) (_options) (input: batch_2d [k] [m] [n]) (wb: weight_bias_2d [a] [b]) : [k][output_m][output_n]t =
     let (kernel, bias) = wb
     in forward_2d output_m output_n input bias kernel
+
+  let init_1d [k] [n] (output_n: i64) (kernel_n: i64) (seed: i32) : layer_type_1d [k] [n] [kernel_n] [output_n] =
+    let forward = layer_new_forward_1d output_n
+    let options = default_options_1d
+    let weights = generate_weights_1d seed kernel_n
+    in { forward, options, weights, shape = output_n }
 
   let init_2d [k] [m] [n] (output_m: i64) (output_n: i64) (kernel_x: i64) (kernel_y: i64) (seed: i32) : layer_type_2d [k] [m] [n] [kernel_x] [kernel_y] [output_m] [output_n] =
     let forward = layer_new_forward_2d output_m output_n

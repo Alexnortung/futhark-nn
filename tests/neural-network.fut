@@ -107,3 +107,51 @@ entry nn_add_layer_test (input: [][][]f64 ) (b1: f64) (w1: [][]f64) =
                    |> nn.conv.set_weights w1
                    |> nn.conv.set_bias b1)
   |> nn.forward input
+
+
+-- entry nn_compositon (input) =
+--   let seed = 1
+--   in nn.init_2d 3 3 seed
+--   |> nn.conv_2d 2 2 2 2
+--   |> nn.maxpool_2d 1 1
+--   |> nn.forward input
+
+-- ==
+-- entry: nn_layer_composition
+-- input {
+--    [[[2.0, 3.0,7.0],[1.0, 1.0, 2.0],[5.0,4.0,3.0]]]
+-- }
+-- output {
+--    [[-3.0430608262944023f64, -3.0430608262944023f64]]
+-- }
+entry nn_layer_composition (input) =
+  let seed = 1
+  let l1 = nn.conv.init_2d 2 2 2 2 seed
+  let l2 = nn.mpool.init_2d 1 1
+  let l2c = nn.dimension.from_2d_1d 1
+  let l3 = nn.lin.init 1 3 (identity) seed
+  let l4 = nn.conv.init_1d 2 2 seed
+  in nn.init_2d 3 3 seed
+  |> nn.add_layer l1
+  |> nn.add_layer l2
+  |> nn.add_layer l2c
+  |> nn.add_layer l3
+  |> nn.add_layer l4
+  |> nn.forward input
+
+-- ==
+-- entry: nn_dimension_test
+-- input {
+--    [[1f64, 2f64, 3f64, 4f64, 5f64, 6f64, 7f64, 8f64]]
+-- }
+-- output {
+--    [[1f64, 2f64, 3f64, 4f64, 5f64, 6f64, 7f64, 8f64]]
+-- }
+entry nn_dimension_test (input) =
+  let seed = 1
+  in nn.init_1d 8 seed
+  |> nn.add_layer (nn.dimension.from_1d_3d 2 2 2)
+  |> nn.add_layer (nn.dimension.from_3d_1d 8)
+  |> nn.add_layer (nn.dimension.from_1d_2d 4 2)
+  |> nn.add_layer (nn.dimension.from_2d_1d 8)
+  |> nn.forward input
