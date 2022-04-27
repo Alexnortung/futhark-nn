@@ -18,3 +18,11 @@ type^ nn_type 'shape_type 'input 'output 'current_weight 'rest_weights = {
   forward: input -> (current_weight, rest_weights) -> output,
   weights: (current_weight, rest_weights)
 }
+
+-- from optimizer
+type optimizer_loss_function 'input 'output 'weights 't = input -> output -> weights -> t
+type^ optimizer_type 't 'options 'shape 'input 'output 'current_weight 'rest_weight = {
+  options: options,
+  network: nn_type shape input output current_weight rest_weight,
+  loss_function: optimizer_loss_function input output (current_weight, rest_weight) t
+}

@@ -1,4 +1,5 @@
-import "../lib/github.com/diku-dk/linalg/linalg"
+-- import "../lib/github.com/diku-dk/linalg/linalg"
+import "../util/linalg"
 import "../util/weight-initialization"
 import "types"
 
