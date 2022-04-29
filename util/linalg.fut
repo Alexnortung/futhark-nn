@@ -12,4 +12,6 @@ module mk_linalg (T: field) = {
   def matmul_scalar [m][n] (xss: [m][n]T.t) (k: T.t): *[m][n]T.t =
     map (map (\x -> x T.* k)) xss
 
+  def vecmul_scalar [n] (xss: [n]T.t) (k: T.t): [n]T.t =
+    map (\x -> x T.* k) xss
 }

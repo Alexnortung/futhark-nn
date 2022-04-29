@@ -13,13 +13,13 @@ module linear (R:real) = {
   type options = ()
   -- type layer_type [k] [m] [n] ((weights_and_bias m n) -> [k][n]t, weights_and_bias m n)
   type^ linear_layer_fwd [k] [m] [n] = layer_fwd_type () (input_type [k] [m]) (weights_and_bias [m] [n]) (output_type [k] [n])
-  type^ linear_layer_type [k] [m] [n] = layer_type options (input_type [k] [m]) (weights_and_bias [m] [n]) (i64) (output_type [k] [n])
+  type^ linear_layer_type [k] [m] [n] = layer_type t options (input_type [k] [m]) (weights_and_bias [m] [n]) (i64) (output_type [k] [n])
 
   module lalg = mk_linalg R
 
   module wi = weight_init R
 
-  let forward  [k] [m] [n] -- k batches, m input nodes and n output nodes
+  def forward  [k] [m] [n] -- k batches, m input nodes and n output nodes
     (input: input_type [k] [m]) -- the values of the input nodes
     (activation_func: t -> t)
     (weights: weights_type [m] [n])
@@ -35,48 +35,43 @@ module linear (R:real) = {
         in activated
       ) input
 
-  let forward_layer [k] [m] [n] (layer: linear_layer_type [k] [m] [n]) (input: input_type [k] [m]) : output_type [k] [n] =
+  def forward_layer [k] [m] [n] (layer: linear_layer_type [k] [m] [n]) (input: input_type [k] [m]) : output_type [k] [n] =
     -- take the forward function (layer.0) and apply the input and the weights + bias (layer.1)
-    let { forward, options, weights, shape = _ } = layer
+    let { forward, options, weights, apply_optimize = _, shape = _ } = layer
     let output = forward options input weights
     in output
 
-  let backward [m] [n]
-    (learning_rate: t)
+  def apply_optimize [m] [n]
+    (_options: options)
+    (apply_func_record: optimizer_apply_record t)
     ((current_weights, current_bias): weights_and_bias [m] [n])
     ((gradient_weights, gradient_bias): weights_and_bias [m] [n])
     : weights_and_bias [m] [n] =
-      let new_weights = map2 (\cw gw ->
-        map2 (\cw gw ->
-          R.(cw - learning_rate * gw)
-        ) cw gw
-      ) current_weights gradient_weights
-
-      let new_bias = map2 (\cb gb ->
-        R.(cb - learning_rate * gb)
-      ) current_bias gradient_bias
+      let new_weights = apply_func_record.apply_2d current_weights gradient_weights
+      let new_bias = apply_func_record.apply_1d current_bias gradient_bias
       in (new_weights, new_bias)
     
 
-  let init [k] (m: i64) (n: i64) (activation_func: t -> t) (seed: i32) : linear_layer_type [k] [m] [n] =
+  def init [k] (m: i64) (n: i64) (activation_func: t -> t) (seed: i32) : linear_layer_type [k] [m] [n] =
     let weights = wi.gen_2d n m seed
     let biases = wi.gen_1d n seed
     -- make a function that represents the forward function, but only needs an input
     let forward_weights = (\_ input (weights, biases) -> forward input activation_func weights biases)
     in {
+      apply_optimize,
       forward = forward_weights,
       weights = (weights, biases),
       options = (),
       shape = n
     }
 
-  let set_weights [k] [m] [n] (layer: linear_layer_type [k] [m] [n]) (new_weights: weights_type [m] [n]) : linear_layer_type [k] [m] [n] =
-    let { forward, options, shape, weights = (_, biases) } = layer
-    let new_layer = { forward, options, shape, weights = (new_weights, biases) }
+  def set_weights [k] [m] [n] (layer: linear_layer_type [k] [m] [n]) (new_weights: weights_type [m] [n]) : linear_layer_type [k] [m] [n] =
+    let { forward, apply_optimize, options, shape, weights = (_, biases) } = layer
+    let new_layer = { apply_optimize, forward, options, shape, weights = (new_weights, biases) }
     in new_layer
 
-  let set_bias [k] [m] [n] (layer: linear_layer_type [k] [m] [n]) (new_bias: bias_type [n]) : linear_layer_type [k] [m] [n] =
-    let { forward, options, shape, weights = (weights, _) } = layer
-    let new_layer = { forward, options, shape, weights = (weights, new_bias) }
+  def set_bias [k] [m] [n] (layer: linear_layer_type [k] [m] [n]) (new_bias: bias_type [n]) : linear_layer_type [k] [m] [n] =
+    let { forward, apply_optimize, options, shape, weights = (weights, _) } = layer
+    let new_layer = { apply_optimize, forward, options, shape, weights = (weights, new_bias) }
     in new_layer
 }
