@@ -5,10 +5,10 @@ type shape_3d = (i64, i64, i64)
 -- optimizer general types
 type^ optimizer_apply_optimize_func 'wb = wb -> wb -> wb -- the optimizer's apply function, which will return the new weights
 type^ optimizer_apply_record 't = {
-  apply_1d: optimizer_apply_optimize_func ([]t),
-  apply_2d: optimizer_apply_optimize_func ([][]t),
-  apply_3d: optimizer_apply_optimize_func ([][][]t),
-  apply_4d: optimizer_apply_optimize_func ([][][][]t)
+  apply_1d: (a: i64) -> optimizer_apply_optimize_func ([a]t),
+  apply_2d: (a: i64) -> (b: i64) -> optimizer_apply_optimize_func ([a][b]t),
+  apply_3d: (a: i64) -> (b: i64) -> (c: i64) -> optimizer_apply_optimize_func ([a][b][c]t),
+  apply_4d: (a: i64) -> (b: i64) -> (c: i64) -> (d: i64) -> optimizer_apply_optimize_func ([a][b][c][d]t)
 }
 type^ optimizer_loss_function 'input 'output 'weights 't = input -> output -> weights -> t -- the loss function for the optimizer
 

@@ -4,6 +4,7 @@ import "../layers/linear"
 -- import "../layers/dimension"
 import "../layers/types"
 import "../optimizers/optimizers"
+import "../util/loss-func"
 
 module neural_network (R:real) = {
   type t = R.t
@@ -18,7 +19,7 @@ module neural_network (R:real) = {
   module optim = optimizers R
 
   module activation = import "../util/activation-func"
-  module loss = import "../util/loss-func"
+  module loss = loss R
 
   def compose_forward 'input_type 'prev_wbs 'layer_input 'current_wbs 'output
     (prev_forward: input_type -> prev_wbs -> layer_input)
@@ -172,24 +173,25 @@ module neural_network (R:real) = {
     let { weights, forward, apply_optimize = _, seed = _, shape = _ } = network
     in forward input weights
 
-  def make_loss [k] [n] [kn] 'input_type 'cw 'rw
-    (loss_function: [kn]t -> [kn]t -> t)
-    (network: nn_type shape_1d input_type ([k][n]t) cw rw)
-    (input: input_type) (expected: [k][n]t) (weights: (cw, rw))
+  def make_loss [k] [n1] [n] 'cw 'rw
+    (loss_function: (sz: i64) -> [sz]t -> [sz]t -> t)
+    (network: nn_type shape_1d ([k][n1]t) ([k][n]t) cw rw)
+    (input: ([k][n1]t)) (expected: [k][n]t) (weights: (cw, rw))
     : t =
       let forward = network.forward
       let output = forward input weights
-      let output = flatten output :> [kn]t
-      let loss = loss_function output (flatten expected :> [kn]t)
+      let kn = k * n
+      let output = flatten_to kn output
+      let loss = loss_function kn output (flatten_to kn expected)
       in loss
 
-  def train 'shape 'input 'output 'cw 'rw 'o_options
+  def train 'shape 'input 'output_type 'cw 'rw 'o_options
     (input: input)
-    (output: output)
+    (output: output_type)
     (iterations: i64)
-    (optimizer: optimizer_type t o_options input output cw rw)
-    (network: nn_type shape input output cw rw)
-    : nn_type shape input output cw rw =
+    (optimizer: optimizer_type t o_options input output_type cw rw)
+    (network: nn_type shape input output_type cw rw)
+    : nn_type shape input output_type cw rw =
       let { loss_function, options = _, apply_gradient } = optimizer
       let initial_weights = network.weights
       let loss = loss_function input output

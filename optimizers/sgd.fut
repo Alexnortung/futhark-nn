@@ -12,8 +12,9 @@ module sgd (R: real) = {
 
   module lalg = mk_linalg R
 
-  def apply_1d [n]
+  def apply_1d
     (learning_rate: t)
+    (n: i64)
     (w: [n]t)
     (wg: [n]t) -- gradient values
     : [n]t =
@@ -22,8 +23,10 @@ module sgd (R: real) = {
       -- apply gradient descent by subtracting the gradient
       in lalg.vecsub w wg_scaled
 
-  def apply_2d [m][n]
+  def apply_2d
     (learning_rate: t)
+    (m: i64)
+    (n: i64)
     (w: [m][n]t)
     (wg: [m][n]t) -- gradient values
     : [m][n]t =
@@ -34,21 +37,30 @@ module sgd (R: real) = {
 
   def apply_3d
     (learning_rate: t)
+    (l: i64)
+    (m: i64)
+    (n: i64)
     (w)
-    (wg) =
+    (wg)
+    : [l][m][n]t =
       map2 (\w_2d wg_2d ->
-        apply_2d learning_rate w_2d wg_2d
+        apply_2d learning_rate m n w_2d wg_2d
       ) w wg
 
   def apply_4d
     (learning_rate: t)
+    (k: i64)
+    (l: i64)
+    (m: i64)
+    (n: i64)
     (w)
-    (wg) =
+    (wg)
+    : [k][l][m][n]t =
       map2 (\w wg ->
-        apply_3d learning_rate w wg
+        apply_3d learning_rate l m n w wg
       ) w wg
 
-  def init 'input 'output 'weights (learning_rate: t) (loss_function: input -> output -> weights -> t) =
+  def init 'shape 'input 'output 'cw 'rw (learning_rate: t) (loss_function: input -> output -> (cw, rw) -> t) : sgd_optimizer shape input output cw rw =
     {
       options = {
         learning_rate
@@ -58,6 +70,10 @@ module sgd (R: real) = {
         apply_2d = apply_2d learning_rate,
         apply_3d = apply_3d learning_rate,
         apply_4d = apply_4d learning_rate
+        -- apply_1d = apply_1d,
+        -- apply_2d = apply_2d,
+        -- apply_3d = apply_3d,
+        -- apply_4d = apply_4d
       },
       loss_function
     }

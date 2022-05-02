@@ -47,8 +47,8 @@ module linear (R:real) = {
     ((current_weights, current_bias): weights_and_bias [m] [n])
     ((gradient_weights, gradient_bias): weights_and_bias [m] [n])
     : weights_and_bias [m] [n] =
-      let new_weights = apply_func_record.apply_2d current_weights gradient_weights
-      let new_bias = apply_func_record.apply_1d current_bias gradient_bias
+      let new_weights = apply_func_record.apply_2d n m current_weights gradient_weights
+      let new_bias = apply_func_record.apply_1d n current_bias gradient_bias
       in (new_weights, new_bias)
     
 
