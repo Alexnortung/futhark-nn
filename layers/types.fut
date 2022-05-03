@@ -2,6 +2,8 @@ type shape_1d = i64
 type shape_2d = (i64, i64)
 type shape_3d = (i64, i64, i64)
 
+type^ activation_type 't = t -> t
+
 -- optimizer general types
 type^ optimizer_apply_optimize_func 'wb = wb -> wb -> wb -- the optimizer's apply function, which will return the new weights
 type^ optimizer_apply_record 't = {

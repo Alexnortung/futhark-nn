@@ -35,7 +35,7 @@ module linear (R:real) = {
         in activated
       ) input
 
-  def forward_layer [k] [m] [n] (layer: linear_layer_type [k] [m] [n]) (input: input_type [k] [m]) : output_type [k] [n] =
+  def forward_layer [k] [m] [n] (input: input_type [k] [m]) (layer: linear_layer_type [k] [m] [n]) : output_type [k] [n] =
     -- take the forward function (layer.0) and apply the input and the weights + bias (layer.1)
     let { forward, options, weights, apply_optimize = _, shape = _ } = layer
     let output = forward options input weights
@@ -65,13 +65,47 @@ module linear (R:real) = {
       shape = n
     }
 
-  def set_weights [k] [m] [n] (layer: linear_layer_type [k] [m] [n]) (new_weights: weights_type [m] [n]) : linear_layer_type [k] [m] [n] =
+  def set_weights [k] [m] [n] (new_weights: weights_type [m] [n]) (layer: linear_layer_type [k] [m] [n]) : linear_layer_type [k] [m] [n] =
     let { forward, apply_optimize, options, shape, weights = (_, biases) } = layer
     let new_layer = { apply_optimize, forward, options, shape, weights = (new_weights, biases) }
     in new_layer
 
-  def set_bias [k] [m] [n] (layer: linear_layer_type [k] [m] [n]) (new_bias: bias_type [n]) : linear_layer_type [k] [m] [n] =
+  def set_bias [k] [m] [n] (new_bias: bias_type [n]) (layer: linear_layer_type [k] [m] [n]) : linear_layer_type [k] [m] [n] =
     let { forward, apply_optimize, options, shape, weights = (weights, _) } = layer
     let new_layer = { apply_optimize, forward, options, shape, weights = (weights, new_bias) }
     in new_layer
 }
+
+-- TESTS
+
+local module test_linear = linear f64
+
+-- ==
+-- entry: linear_forward linear_init_forward
+-- input {[
+--        [1.0, 2.0, 3.0, 4.0],
+--        [2.0, 3.0, 4.0, 5.0],
+--        [3.0, 4.0, 5.0, 6.0]]
+--
+--        [[1.0,  2.0,  3.0,  4.0],
+--         [5.0,  6.0,  7.0,  8.0],
+--         [9.0, 10.0, 11.0, 12.0]]
+--
+--         [1.0, 2.0, 3.0]}
+--
+-- output {[
+--          [ 31.0,  72.0, 113.0],
+--          [ 41.0,  98.0, 155.0],
+--          [ 51.0, 124.0, 197.0]
+--         ]}
+
+entry linear_forward [k] (input: [k][]f64) w b : [k][]f64 =
+  let output = test_linear.forward input (\x -> x) w b
+  in output
+
+entry linear_init_forward [k] [m] [n] (input: [k][m]f64) (w: [n][m]f64) (b: [n]f64) : [k][n]f64 =
+  test_linear.init m n (\x -> x) 1
+  |> test_linear.set_weights w
+  |> test_linear.set_bias b
+  |> test_linear.forward_layer input
+

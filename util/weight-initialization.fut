@@ -23,4 +23,14 @@ module weight_init (R: real) = {
     map (\_ ->
       gen_1d n seed
     ) (iota m)
+
+  let gen_3d (l: i64) (m: i64) (n: i64) (seed: i32) : [l][m][n]t =
+    map (\_ ->
+      gen_2d m n seed
+    ) (iota l)
+
+  let gen_4d (k: i64) (l: i64) (m: i64) (n: i64) (seed: i32) : [k][l][m][n]t =
+    map (\_ ->
+      gen_3d l m n seed
+    ) (iota k)
 }
