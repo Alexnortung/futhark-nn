@@ -11,10 +11,13 @@ module neural_network (R:real) = {
 
   type^ nn_type 'shape_type 'input 'output 'current_weight 'rest_weights = nn_type t shape_type input output current_weight rest_weights
 
-  -- module conv = convolutional R
-  module lin = linear R
-  -- module mpool = pooling R
-  -- module dimension = dimension
+  module layers = {
+    module convolutional = convolutional R
+    module linear = linear R
+    module maxpool = pooling R
+    module dimension = dimension
+  }
+
   
   module optim = optimizers R
 
@@ -117,10 +120,10 @@ module neural_network (R:real) = {
     -- (m: i64)
     (n: i64)
     (activation: t -> t)
-    (network: nn_type shape_1d input_type (lin.input_type [k] [m]) prev_current_weight prev_rest_weight)
-    : nn_type shape_1d input_type (lin.output_type [k] [n]) (lin.weights_and_bias [m] [n]) (prev_current_weight, prev_rest_weight) =
+    (network: nn_type shape_1d input_type (layers.linear.input_type [k] [m]) prev_current_weight prev_rest_weight)
+    : nn_type shape_1d input_type (layers.linear.output_type [k] [n]) (layers.linear.weights_and_bias [m] [n]) (prev_current_weight, prev_rest_weight) =
       let seed = network.seed
-      let layer = lin.init m n activation seed
+      let layer = layers.linear.init m n activation seed
       in add_layer layer network
 
   -- def maxpool_2d_shape 'input 'output 'cw 'rw (window_m: i64) (window_n: i64) (network: nn_type shape_2d input output cw rw) : shape_2d =
