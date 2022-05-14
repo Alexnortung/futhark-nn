@@ -1,7 +1,7 @@
-{ pkgs, futhark, system, ... }:
+{ pkgs, system, ... }:
 
 pkgs.mkShell {
     buildInputs = [
-        futhark.packages.${system}.futhark
+        pkgs.futhark
     ];
 }
