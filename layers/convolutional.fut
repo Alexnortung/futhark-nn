@@ -17,8 +17,8 @@ module convolutional (R:real) = {
   type kernel_2d [channels] [a] [b] = [channels][a][b]t
   type weight_bias_1d [channels] [a] = (kernel_1d [channels] [a], [channels]t)
   type weight_bias_2d [channels] [a] [b] = (kernel_2d [channels] [a] [b], [channels]t)
-  type^ layer_type_1d [k] [in_channels] [out_channels] [n] [a] [out_n] = layer_type options_1d t (batch_1d [k] [in_channels] [n]) (weight_bias_1d [out_channels] [a]) shape_2d (batch_1d [k] [out_channels] [out_n])
-  type^ layer_type_2d [k] [in_channels] [out_channels] [m] [n] [a] [b] [out_m] [out_n] = layer_type t (options_2d) (batch_2d [k] [in_channels] [m] [n]) (weight_bias_2d [out_channels] [a] [b]) shape_3d (batch_2d [k] [out_channels] [out_m] [out_n])
+  type^ layer_type_1d [k] [in_channels] [out_channels] [n] [a] [out_n] = layer_type t options_1d (batch_1d [k] [in_channels] [n]) (weight_bias_1d [out_channels] [a]) shape_2d (batch_1d [k] [out_channels] [out_n])
+  type^ layer_type_2d [k] [in_channels] [out_channels] [m] [n] [a] [b] [out_m] [out_n] = layer_type t options_2d (batch_2d [k] [in_channels] [m] [n]) (weight_bias_2d [out_channels] [a] [b]) shape_3d (batch_2d [k] [out_channels] [out_m] [out_n])
 
   module lalg = mk_linalg R
 
@@ -33,28 +33,32 @@ module convolutional (R:real) = {
     padding = (0, 0)
   }
 
-  -- def forward_1d [k] [n] [a]
-  --   (in_channels: i64)
-  --   (output_n: i64)
-  --   (out_channels: i64)
-  --   (input: batch_1d [k] [n])
-  --   (bias: t)
-  --   (filter_weights: kernel_1d [a]) : batch_1d [k] [output_n] =
-  --     let xs = iota output_n
-  --     in
-  --     map (\input ->
-  --       map (\x ->
-  --         let slice = input[x:x+a] :> [a]t
-  --         let dotted = lalg.dotprod slice filter_weights
-  --         in R.(dotted + bias)
-  --       ) xs
-  --     ) input
+  def forward_1d [k] [in_channels] [out_channels] [n] [a] -- k batches, m times n input nodes and a times b filter size
+    (output_n: i64)
+    (input: batch_1d [k] [in_channels] [n])
+    (activation_func: activation_type t)
+    (bias: [out_channels]t)
+    (filter_weights: kernel_1d [out_channels] [a]) : batch_1d [k] [out_channels] [output_n] =
+      let xs = iota output_n
+      in
+      map (\batch ->
+        map2 (\filter_channel bias_channel ->
+          map (\x -> 
+            map (\channel ->
+              let input_slice = channel[x:x+a] :> [a]t
+              let dotted : t = lalg.dotprod input_slice filter_channel
+              in R.(dotted)
+            ) batch
+            |> R.(sum)
+            |> R.((+) bias_channel)
+            |> activation_func
+          ) xs
+        ) filter_weights bias
+      ) input
 
   def forward_2d [k] [in_channels] [out_channels] [m] [n] [a] [b] -- k batches, m times n input nodes and a times b filter size
     (output_m: i64)
     (output_n: i64)
-    -- (in_channels: i64)
-    -- (out_channels: i64)
     (input: batch_2d [k] [in_channels] [m] [n])
     (activation_func: activation_type t)
     (bias: [out_channels]t)
@@ -62,7 +66,6 @@ module convolutional (R:real) = {
       let xs = iota output_m -- m - a + 1
       let ys = iota output_n -- n - b + 1
       let c = a * b
-      -- TODO: find a solution where there is not used dynamic casting
       in
       map (\batch ->
         map2 (\filter_channel bias_channel ->
@@ -114,27 +117,39 @@ module convolutional (R:real) = {
     let bias = wi.gen_1d out_channels seed
     in (weights, bias)
 
-  -- def layer_new_forward_1d [k] [n] [a] (output_n: i64) (_options) (input: batch_1d [k] [n]) (wb: weight_bias_1d [a]) : batch_1d [k] [output_n] =
-  --   let (kernel, bias) = wb
-  --   in forward_1d output_n input bias kernel
+  def layer_new_forward_1d [k] [in_channels] [out_channels] [n] [a]
+    (output_n: i64)
+    (activation_func: activation_type t)
+    (_options: options_1d)
+    (input: batch_1d [k] [in_channels] [n])
+    (wb: weight_bias_1d [out_channels] [a]) : batch_1d [k] [out_channels] [output_n] =
+      let (kernel, bias) = wb
+      in forward_1d output_n input activation_func bias kernel
 
   def layer_new_forward_2d [k] [in_channels] [out_channels] [m] [n] [a] [b]
     (output_m: i64)
     (output_n: i64)
     (activation_func: activation_type t)
-    -- (in_channels: i64)
-    -- (out_channels: i64)
     (_options: options_2d)
     (input: batch_2d [k] [in_channels] [m] [n])
     (wb: weight_bias_2d [out_channels] [a] [b]) : batch_2d [k] [out_channels] [output_m] [output_n] =
       let (kernel, bias) = wb
       in forward_2d output_m output_n input activation_func bias kernel
 
-  -- def init_1d [k] [n] (output_n: i64) (kernel_n: i64) (seed: i32) : layer_type_1d [k] [n] [kernel_n] [output_n] =
-  --   let forward = layer_new_forward_1d output_n
-  --   let options = default_options_1d
-  --   let weights = generate_weights_1d seed kernel_n
-  --   in { forward, options, weights, shape = output_n }
+  def init_1d [k] [n]
+    (output_n: i64)
+    (in_channels: i64)
+    (out_channels: i64)
+    (kernel_sz: i64)
+    (activation_func: activation_type t)
+    (seed: i32)
+    : layer_type_1d [k] [in_channels] [out_channels] [n] [kernel_sz] [output_n] =
+      let forward = layer_new_forward_1d output_n activation_func
+      let options = default_options_1d
+      let weights = generate_weights_1d seed out_channels kernel_sz
+      in { forward, apply_optimize = apply_optimize_1d,
+           options, weights,
+           shape = (out_channels, output_n) }
 
   def init_2d [k] [m] [n]
     (output_m: i64)
@@ -168,8 +183,10 @@ module convolutional (R:real) = {
       in  { forward, apply_optimize, options, shape, weights = (weights, bias)}
 
   def forward_layer (input) (layer) =
-    let { forward, apply_optimize, options, weights, shape = _ } = layer
+    let { forward, apply_optimize = _, options, weights, shape = _ } = layer
     in forward options input weights
+
+  -- TODO: add functions for setting padding and stride
 }
 
 -- TESTS
@@ -208,3 +225,41 @@ entry conv_layer [k] [a] [b] (input: [k][][][]f64) (bias: []f64) (weights: [][a]
   |> test_conv.set_weights weights
   |> test_conv.forward_layer input
 
+------- ==
+-- entry: conv_layer_channels
+-- input {
+--    [
+--    [
+--      [[1.0, 2.0], [3.0, 4.0]],
+--      [[5.0, 6.0], [7.0, 8.0]]
+--    ]
+--    ]
+--
+--    [2.0, 3.0]
+--
+--    [
+--    [
+--      [10.0, 2.0],
+--      [-1.0, -2.0]
+--    ],
+--    [
+--      [20.0, 4.0],
+--      [-3.0, -4.0]
+--    ]
+--    ]
+--
+-- }
+-- output {
+--    [[[[44.000000f64]], [[77.000000f64]]]]
+-- }
+entry conv_layer_channels [k] (input: [k][2][2][2]f64) (bias: [2]f64) (weights: [2][2][2]f64) : [k][2][1][1]f64 =
+  test_conv.init_2d 1 1 2 2 2 2 (id) 1
+  |> test_conv.set_bias bias
+  |> test_conv.set_weights weights
+  |> test_conv.forward_layer input
+
+entry conv_1d (input: [][][]f64) (bias: []f64) (weights: [][]f64) : [][][]f64 =
+  test_conv.init_1d 2 2 2 1 (id) 1
+  |> test_conv.set_bias bias
+  |> test_conv.set_weights weights
+  |> test_conv.forward_layer input
