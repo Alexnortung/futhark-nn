@@ -1,10 +1,10 @@
 import "../util/change-dimensions"
 import "types"
 
-module dimension = {
+module dimension (R:real) = {
   type options = ()
 
-  type^ dimension_layer 'from_size 'to_size 'shape = layer_type () options from_size () shape to_size
+  type^ dimension_layer 'from_size 'to_size 'shape = layer_type R.t options from_size () shape to_size
 
   def options = ()
   def weights = ()
@@ -49,7 +49,7 @@ module dimension = {
 
 -- TESTS
 
-local module test_dim = dimension
+local module test_dim = dimension f64
 
 -- ==
 -- entry: test_1d_2d

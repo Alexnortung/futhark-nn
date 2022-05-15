@@ -193,7 +193,7 @@ module convolutional (R:real) = {
 
 -- TESTS
 
-module test_conv = convolutional f64
+local module test_conv = convolutional f64
 
 -- ==
 -- entry: conv conv_layer

@@ -15,7 +15,7 @@ module neural_network (R:real) = {
     module convolutional = convolutional R
     module linear = linear R
     module maxpool = pooling R
-    module dimension = dimension
+    module dimension = dimension R
   }
 
   
@@ -141,31 +141,24 @@ module neural_network (R:real) = {
     =
       let layer = layers.maxpool.init_2d output_m output_n
       in add_layer layer network
-      -- let { forward = layer_forward, options = layer_options, weights = layer_weights, shape = _ } = layer
-      -- let new_forward = compose_forward forward (layer_forward layer_options)
-      -- in {
-      --   seed,
-      --   shape = (output_m, output_n),
-      --   weights = (layer_weights, weights),
-      --   forward = new_forward
-      -- }
 
-  -- def from_1d_2d (output_m) (output_n) (network) =
-  --   let layer = dimension.from_1d_2d output_m output_n
-  --   in add_layer layer network
-  --
-  -- def from_1d_3d (output_l) (output_m) (output_n) (network) =
-  --   let layer = dimension.from_1d_3d output_l output_m output_n
-  --   in add_layer layer network
-  --
-  -- def from_2d_1d (network) =
-  --   let layer = dimension.from_2d_1d
-  --   in add_layer layer network
-  --
-  -- def from_3d_1d (network) =
-  --   let (l, m, n) = network.shape
-  --   let layer = dimension.from_3d_1d (l * m * n)
-  --   in add_layer layer network
+  def from_1d_2d (output_m) (output_n) (network) =
+    let layer = layers.dimension.from_1d_2d output_m output_n
+    in add_layer layer network
+
+  def from_1d_3d (output_l) (output_m) (output_n) (network) =
+    let layer = layers.dimension.from_1d_3d output_l output_m output_n
+    in add_layer layer network
+
+  def from_2d_1d (network) =
+    let (m, n) = network.shape
+    let layer = layers.dimension.from_2d_1d (m * n)
+    in add_layer layer network
+
+  def from_3d_1d (network) =
+    let (l, m, n) = network.shape
+    let layer = layers.dimension.from_3d_1d (l * m * n)
+    in add_layer layer network
 
   def set_weights (new_weights) (network) =
     let { seed, shape, forward, weights = _, apply_optimize } = network
