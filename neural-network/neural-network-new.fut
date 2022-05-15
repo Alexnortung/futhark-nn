@@ -1,7 +1,7 @@
--- import "../layers/convolutional"
+import "../layers/convolutional"
 import "../layers/linear"
--- import "../layers/pooling"
--- import "../layers/dimension"
+import "../layers/pooling"
+import "../layers/dimension"
 import "../layers/types"
 import "../optimizers/optimizers"
 import "../util/loss-func"
@@ -67,6 +67,24 @@ module neural_network (R:real) = {
       weights = ((), ())
     }
 
+  def init_3d [k] (l: i64) (m: i64) (n: i64) (seed: i32) : nn_type shape_3d ([k][l][m][n]t) ([k][l][m][n]t) () () =
+    {
+      seed,
+      shape = (l, m, n),
+      forward = init_forward,
+      apply_optimize = init_apply_optimize,
+      weights = ((), ())
+    }
+
+  def init_4d [k] (o: i64) (l: i64) (m: i64) (n: i64) (seed: i32) : nn_type shape_4d ([k][o][l][m][n]t) ([k][o][l][m][n]t) () () =
+    {
+      seed,
+      shape = (o, l, m, n),
+      forward = init_forward,
+      apply_optimize = init_apply_optimize,
+      weights = ((), ())
+    }
+
   def add_layer 'nn_input 'l_input 'l_options  'l_wb 'l_shape 'l_out 'nn_shape 'prev_current_weight 'prev_rest_weight
     (layer: layer_type t l_options l_input l_wb l_shape l_out)
     (network: nn_type nn_shape nn_input l_input prev_current_weight prev_rest_weight)
@@ -89,35 +107,23 @@ module neural_network (R:real) = {
       forward = new_forward
     }
 
-  -- def conv_2d_shape 'input 'output 'cw 'rw (kernel_m: i64) (kernel_n: i64) (network: nn_type shape_2d input output cw rw) : shape_2d =
-  --   let shape = network.shape
-  --   let output_m = shape.0 - kernel_m + 1
-  --   let output_n = shape.1 - kernel_n + 1
-  --   in (output_m, output_n)
-  --
-  -- def conv_2d 'input_type  'prev_current_weight 'prev_rest_weight 'current_weight
-  --   [k] [prev_m] [prev_n]
-  --   (output_m: i64)
-  --   (output_n: i64)
-  --   (kernel_m: i64)
-  --   (kernel_n: i64)
-  --   (network: nn_type shape_2d input_type ([k][prev_m][prev_n]t) prev_current_weight prev_rest_weight)
-  --   : nn_type shape_2d input_type ([k][output_m][output_n]t) ([kernel_m][kernel_n]t, t) (prev_current_weight, prev_rest_weight)
-  --   =
-  --     let { shape = _, weights, forward, seed } = network
-  --     let layer = conv.init_2d output_m output_n kernel_m kernel_n seed
-  --     let { forward = layer_forward, options = layer_options, weights = layer_weights, shape = _} = layer
-  --     let new_forward = compose_forward forward (layer_forward layer_options)
-  --     in {
-  --       seed,
-  --       shape = (output_m, output_n),
-  --       weights = (layer_weights, weights),
-  --       forward = new_forward
-  --     }
+  def conv_2d 'input_type 'prev_current_weight 'prev_rest_weight 'current_weight
+    [k] [prev_m] [prev_n] [in_channels]
+    (output_m: i64)
+    (output_n: i64)
+    (out_channels: i64)
+    (kernel_m: i64)
+    (kernel_n: i64)
+    (activation_func: activation_type t)
+    (network: nn_type shape_3d input_type ([k][in_channels][prev_m][prev_n]t) prev_current_weight prev_rest_weight)
+    : nn_type shape_3d input_type (layers.convolutional.batch_2d [k] [out_channels] [output_m] [output_n]) (layers.convolutional.weight_bias_2d [out_channels] [kernel_m] [kernel_n]) (prev_current_weight, prev_rest_weight)
+    =
+      let seed = network.seed
+      let layer = layers.convolutional.init_2d output_m output_n in_channels out_channels kernel_m kernel_n activation_func seed
+      in add_layer layer network
 
   def linear 'rest_weights 'input_type 'prev_current_weight 'prev_rest_weight
     [k] [m]
-    -- (m: i64)
     (n: i64)
     (activation: t -> t)
     (network: nn_type shape_1d input_type (layers.linear.input_type [k] [m]) prev_current_weight prev_rest_weight)
@@ -126,27 +132,23 @@ module neural_network (R:real) = {
       let layer = layers.linear.init m n activation seed
       in add_layer layer network
 
-  -- def maxpool_2d_shape 'input 'output 'cw 'rw (window_m: i64) (window_n: i64) (network: nn_type shape_2d input output cw rw) : shape_2d =
-  --   let (m, n) = network.shape
-  --   in (m / window_m, n / window_n)
-  --
-  -- def maxpool_2d 'input_type  'prev_current_weight 'prev_rest_weight 'current_weight
-  --   [k] [prev_m] [prev_n]
-  --   (output_m: i64)
-  --   (output_n: i64)
-  --   (network: nn_type shape_2d input_type ([k][prev_m][prev_n]t) prev_current_weight prev_rest_weight)
-  --   : nn_type shape_2d input_type ([k][output_m][output_n]t) () (prev_current_weight, prev_rest_weight)
-  --   =
-  --     let { shape = _, weights, forward, seed } = network
-  --     let layer = mpool.init_2d output_m output_n
-  --     let { forward = layer_forward, options = layer_options, weights = layer_weights, shape = _ } = layer
-  --     let new_forward = compose_forward forward (layer_forward layer_options)
-  --     in {
-  --       seed,
-  --       shape = (output_m, output_n),
-  --       weights = (layer_weights, weights),
-  --       forward = new_forward
-  --     }
+  def maxpool_2d 'input_type  'prev_current_weight 'prev_rest_weight 'current_weight
+    [k] [prev_m] [prev_n]
+    (output_m: i64)
+    (output_n: i64)
+    (network: nn_type shape_2d input_type ([k][prev_m][prev_n]t) prev_current_weight prev_rest_weight)
+    : nn_type shape_2d input_type ([k][output_m][output_n]t) () (prev_current_weight, prev_rest_weight)
+    =
+      let layer = layers.maxpool.init_2d output_m output_n
+      in add_layer layer network
+      -- let { forward = layer_forward, options = layer_options, weights = layer_weights, shape = _ } = layer
+      -- let new_forward = compose_forward forward (layer_forward layer_options)
+      -- in {
+      --   seed,
+      --   shape = (output_m, output_n),
+      --   weights = (layer_weights, weights),
+      --   forward = new_forward
+      -- }
 
   -- def from_1d_2d (output_m) (output_n) (network) =
   --   let layer = dimension.from_1d_2d output_m output_n
@@ -206,3 +208,106 @@ module neural_network (R:real) = {
       let new_network = set_weights optimized_weights network
       in new_network
 }
+
+-- TESTS
+
+local module nn_test = neural_network f64
+
+-- ==
+-- entry: nn_linear_test
+-- input {
+--    [[1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0]]
+--    
+--    1i32
+-- }
+-- output {
+--    [[-18.80553453580382f64]]
+-- }
+entry nn_linear_test [k] (input: [k][]f64) (seed: i32) =
+  nn_test.init_1d 7 seed
+  |> nn_test.linear 5 (nn_test.activation.identity)
+  |> nn_test.linear 6 (nn_test.activation.identity)
+  |> nn_test.linear 1 (nn_test.activation.identity)
+  |> nn_test.forward input
+
+-- ==
+-- entry: nn_conv_test
+-- input {
+--  [[[[1.0,2.0,3.0,4.0,5.0],
+--    [1.0,2.0,3.0,4.0,5.0],
+--    [1.0,2.0,3.0,4.0,5.0],
+--    [1.0,2.0,3.0,4.0,5.0],
+--    [1.0,2.0,3.0,4.0,5.0],
+--    [1.0,2.0,3.0,4.0,5.0]]],
+--   [[[1.0,2.0,3.0,4.0,5.0],
+--    [1.0,2.0,3.0,4.0,5.0],
+--    [1.0,2.0,3.0,4.0,5.0],
+--    [1.0,2.0,3.0,4.0,5.0],
+--    [1.0,2.0,3.0,4.0,5.0],
+--    [1.0,2.0,3.0,4.0,5.0]]]]
+--
+--    1i32
+-- }
+-- auto output
+
+entry nn_conv_test [k] (input: [k][1][6][5]f64) (seed: i32) =
+  nn_test.init_3d 1 6 5 seed
+  |> nn_test.conv_2d 4 4 1 3 2 (nn_test.activation.identity)
+  |> nn_test.conv_2d 2 3 1 3 2 (nn_test.activation.identity)
+  |> nn_test.forward input
+
+-- ==
+-- entry: nn_maxpool_2d_test
+-- input {
+--  [
+--   [[1.0, 2.0, 3.0, 4.0, 1.0, 2.0, 3.0, 4.0],
+--    [1.0, 2.0, 3.0, 4.0, 1.0, 2.0, 3.0, 4.0],
+--    [1.0, 2.0, 3.0, 4.0, 1.0, 2.0, 3.0, 4.0],
+--    [1.0, 2.0, 3.0, 4.0, 1.0, 2.0, 3.0, 4.0],
+--    [1.0, 2.0, 3.0, 4.0, 1.0, 2.0, 3.0, 4.0],
+--    [1.0, 2.0, 3.0, 4.0, 1.0, 2.0, 3.0, 4.0],
+--    [1.0, 2.0, 3.0, 4.0, 1.0, 2.0, 3.0, 4.0],
+--    [1.0, 2.0, 3.0, 4.0, 1.0, 2.0, 3.0, 4.0]]
+--  ]
+-- }
+-- output { [
+--   [[2.0, 4.0, 2.0, 4.0],
+--    [2.0, 4.0, 2.0, 4.0]]
+-- ] }
+entry nn_maxpool_2d_test (input: [][][]f64) =
+  nn_test.init_2d 8 8 1
+  |> nn_test.maxpool_2d 4 4
+  |> nn_test.maxpool_2d 2 4
+  |> nn_test.forward input
+
+-- ==
+-- entry: nn_add_layer_test
+-- input {[
+--        [[[ 1.0, 2.0, 3.0],
+--         [10.0, 9.0, 8.0],
+--         [ 4.0, 5.0, 6.0]]],
+--        [[[ 1.0, 2.0, 3.0],
+--         [10.0, 9.0, 8.0],
+--         [ 4.0, 5.0, 7.0]]]]
+--
+--        [3.0]
+--      
+--        [[[1.0, 3.0],
+--         [2.0, 9.0]]]
+-- }
+-- output {[
+--         [[[111.0, 104.0],
+--          [ 93.0, 100.0]]],
+--         [[[111.0, 104.0],
+--          [ 93.0, 109.0]]]
+--         ]
+-- }
+
+entry nn_add_layer_test (input: [][][][]f64 ) (b1: []f64) (w1: [][][]f64) =
+  let seed = 1
+  in nn_test.init_3d 1 3 3 seed
+  |> nn_test.add_layer (nn_test.layers.convolutional.init_2d 2 2 1 1 2 2 (nn_test.activation.identity) seed
+                   |> nn_test.layers.convolutional.set_weights w1
+                   |> nn_test.layers.convolutional.set_bias b1)
+  |> nn_test.forward input
+

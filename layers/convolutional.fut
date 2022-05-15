@@ -168,6 +168,7 @@ module convolutional (R:real) = {
            options, weights,
            shape = (out_channels, output_m, output_n) }
 
+  -- TODO: set reutrn type such that bias must have the same type as the current bias
   def set_bias -- [k] [m] [n] [a] [b] [out_m] [out_n]
     (bias)
     (layer)
@@ -175,6 +176,7 @@ module convolutional (R:real) = {
       let { forward, apply_optimize, options, shape, weights = (weights, _)} = layer
       in  { forward, apply_optimize, options, shape, weights = (weights, bias)}
 
+  -- TODO: set reutrn type such that bias must have the same type as the current bias
   def set_weights -- [k] [m] [n] [a] [b]
     (weights)
     (layer)
