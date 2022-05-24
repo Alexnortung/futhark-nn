@@ -16,13 +16,11 @@
                 pkgs = nixpkgs.legacyPackages.${system};
                 lib = nixpkgs.lib;
             };
-            mnist-images-futhark = import ./programs/mnist-futhark.nix {
+            mnist-futhark = import ./programs/mnist-futhark.nix {
                 inherit system mnist-data;
                 pkgs = nixpkgs.legacyPackages.${system};
                 lib = nixpkgs.lib;
             };
-            mnist-training-images-futhark = mnist-images-futhark.mnist-training-images;
-            mnist-test-images-futhark = mnist-images-futhark.mnist-test-images;
         };
     });
 }
