@@ -185,7 +185,7 @@ module neural_network (R:real) = {
 
   def train 'shape 'input 'output_type 'cw 'rw 'o_options
     (input: input)
-    (output: output_type)
+    (output: output_type) -- aka labels
     (iterations: i64)
     (optimizer: optimizer_type t o_options input output_type cw rw)
     (network: nn_type shape input output_type cw rw)

@@ -42,6 +42,15 @@ module dimension (R:real) = {
       shape = lmn
     }
 
+  def from_3d_2d [k][l][m][n] 't (out_m: i64) (out_n: i64) : dimension_layer ([k][l][m][n]t) ([k][out_m][out_n]t) shape_2d =
+    let forward (_options) (input: [k][l][m][n]t) (_weights) =
+      change_dimensions.from_3d_to_2d input
+    in {
+      forward, options, weights, apply_optimize,
+      shape = (out_m, out_n)
+    }
+    
+
   def forward_layer (input) (layer) =
     let { forward, apply_optimize, options, weights, shape = _ } = layer
     in forward options input weights

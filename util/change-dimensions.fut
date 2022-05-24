@@ -48,4 +48,8 @@ module change_dimensions = {
       ) (iota lmn)
     ) (iota k)
 
+  def from_3d_to_1d [k] [l] [m] [n] [out_m] [out_n] 't (input: [k][l][m][n]t) : [k][out_m][out_n]t =
+    from_3d_to_1d input
+    |> from_1d_to_2d out_m out_n input
+
 }
