@@ -28,7 +28,7 @@ module dimension (R:real) = {
 
   def from_2d_1d [k] [m] [n] 't (mn: i64) : dimension_layer ([k][m][n]t) ([k][mn]t) shape_1d =
     let forward (_options) (input: [k][m][n]t) (_weights) =
-      change_dimensions.from_2d_to_1d input
+      change_dimensions.from_2d_to_1d mn input
     in {
       forward, options, weights, apply_optimize,
       shape = mn
@@ -36,7 +36,7 @@ module dimension (R:real) = {
 
   def from_3d_1d [k] [l] [m] [n] 't (lmn: i64) : dimension_layer ([k][l][m][n]t) ([k][lmn]t) shape_1d =
     let forward (_options) (input: [k][l][m][n]t) (_weights) =
-      change_dimensions.from_3d_to_1d input
+      change_dimensions.from_3d_to_1d lmn input
     in {
       forward, options, weights, apply_optimize,
       shape = lmn
@@ -44,7 +44,7 @@ module dimension (R:real) = {
 
   def from_3d_2d [k][l][m][n] 't (out_m: i64) (out_n: i64) : dimension_layer ([k][l][m][n]t) ([k][out_m][out_n]t) shape_2d =
     let forward (_options) (input: [k][l][m][n]t) (_weights) =
-      change_dimensions.from_3d_to_2d input
+      change_dimensions.from_3d_to_2d out_m out_n input
     in {
       forward, options, weights, apply_optimize,
       shape = (out_m, out_n)

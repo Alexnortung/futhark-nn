@@ -2,7 +2,12 @@
 
 let
     numberSuffix = ".0";
-    dataType = "f64";
+    # dataType = "f64";
+    dataType = "";
+    buildTraining = true;
+    buildTest = true;
+    numTrainingImages = 20;
+    numTestImages = 20;
 in
 pkgs.stdenvNoCC.mkDerivation {
     name = "mnist-futhark";
@@ -24,32 +29,36 @@ pkgs.stdenvNoCC.mkDerivation {
         COLS=$(tail --lines=1 header-lines)
 
         echo "Building training images"
-        od -An -v --width=1 -t u1 --endian=big --skip-bytes=16 $UNZIPPED \
-            | ${pkgs.jq}/bin/jq -cM '[inputs] | . as $input | [range(0; length; '$ROWS')] | map($input[. : . + '$ROWS']) | . as $input | [range(0; length; '$COLS')] | map($input[. : . + '$COLS']) | map([.])' \
+        head -c $((16 + ${toString numTrainingImages} * $ROWS * $COLS)) $UNZIPPED \
+            | od -An -v --width=1 -t u1 --endian=big --skip-bytes=16 \
+            | ${pkgs.jq}/bin/jq -scM '. as $input | [range(0; length; '$ROWS')] | map($input[. : . + '$ROWS']) | . as $input | [range(0; length; '$COLS')] | map($input[. : . + '$COLS']) | map([.])' \
             | ${pkgs.gnused}/bin/sed -E 's/([0-9]+)/\1${numberSuffix}${dataType}/g' \
             > training-images-futhark
-
-        # test images
-        UNZIPPED="t10k-images-idx3-ubyte"
-        echo "Building test images"
-        od -An -v --width=1 -t u1 --endian=big --skip-bytes=16 $UNZIPPED \
-            | ${pkgs.jq}/bin/jq -cM '[inputs] | . as $input | [range(0; length; '$ROWS')] | map($input[. : . + '$ROWS']) | . as $input | [range(0; length; '$COLS')] | map($input[. : . + '$COLS']) | map([.])' \
-            | ${pkgs.gnused}/bin/sed -E 's/([0-9]+)/\1${numberSuffix}${dataType}/g' \
-            > test-images-futhark
 
         # training labels
         UNZIPPED="train-labels-idx1-ubyte"
         echo "Building training labels"
-        od -An -v --width=1 -t u1 --endian=big --skip-bytes=8 $UNZIPPED \
-            | ${pkgs.jq}/bin/jq -cM '[inputs] | map([.])' \
+        head -c $((8 + ${toString numTrainingImages})) $UNZIPPED \
+            | od -An -v --width=1 -t u1 --endian=big --skip-bytes=8 \
+            | ${pkgs.jq}/bin/jq -scM \
             | ${pkgs.gnused}/bin/sed -E 's/([0-9]+)/\1${numberSuffix}${dataType}/g' \
             > training-labels-futhark
+
+        # test images
+        UNZIPPED="t10k-images-idx3-ubyte"
+        echo "Building test images"
+        head -c $((16 + ${toString numTestImages} * $ROWS * $COLS)) $UNZIPPED \
+            | od -An -v --width=1 -t u1 --endian=big --skip-bytes=16 \
+            | ${pkgs.jq}/bin/jq -scM '. as $input | [range(0; length; '$ROWS')] | map($input[. : . + '$ROWS']) | . as $input | [range(0; length; '$COLS')] | map($input[. : . + '$COLS']) | map([.])' \
+            | ${pkgs.gnused}/bin/sed -E 's/([0-9]+)/\1${numberSuffix}${dataType}/g' \
+            > test-images-futhark
 
         # test labels
         UNZIPPED="t10k-labels-idx1-ubyte"
         echo "Building test labels"
-        od -An -v --width=1 -t u1 --endian=big --skip-bytes=8 $UNZIPPED \
-            | ${pkgs.jq}/bin/jq -cM '[inputs] | map([.])' \
+        head -c $((8 + ${toString numTestImages})) $UNZIPPED \
+            | od -An -v --width=1 -t u1 --endian=big --skip-bytes=8 \
+            | ${pkgs.jq}/bin/jq -scM \
             | ${pkgs.gnused}/bin/sed -E 's/([0-9]+)/\1${numberSuffix}${dataType}/g' \
             > test-labels-futhark
 

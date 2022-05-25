@@ -5,6 +5,7 @@ import "../layers/dimension"
 import "../layers/types"
 import "../optimizers/optimizers"
 import "../util/loss-func"
+import "../util/activation-func"
 
 module neural_network (R:real) = {
   type t = R.t
@@ -21,7 +22,7 @@ module neural_network (R:real) = {
   
   module optim = optimizers R
 
-  module activation = import "../util/activation-func"
+  module activation = activation_func R
   module loss = loss R
 
   def compose_forward 'input_type 'prev_wbs 'layer_input 'current_wbs 'output
@@ -125,7 +126,7 @@ module neural_network (R:real) = {
   def linear 'rest_weights 'input_type 'prev_current_weight 'prev_rest_weight
     [k] [m]
     (n: i64)
-    (activation: t -> t)
+    (activation: activation_type t)
     (network: nn_type shape_1d input_type (layers.linear.input_type [k] [m]) prev_current_weight prev_rest_weight)
     : nn_type shape_1d input_type (layers.linear.output_type [k] [n]) (layers.linear.weights_and_bias [m] [n]) (prev_current_weight, prev_rest_weight) =
       let seed = network.seed
@@ -171,10 +172,10 @@ module neural_network (R:real) = {
     let { weights, forward, apply_optimize = _, seed = _, shape = _ } = network
     in forward input weights
 
-  def make_loss [k] [n1] [n] 'cw 'rw
+  def make_loss [k] [n] 'input_type 'cw 'rw
     (loss_function: (sz: i64) -> [sz]t -> [sz]t -> t)
-    (network: nn_type shape_1d ([k][n1]t) ([k][n]t) cw rw)
-    (input: ([k][n1]t)) (expected: [k][n]t) (weights: (cw, rw))
+    (network: nn_type shape_1d ([k]input_type) ([k][n]t) cw rw)
+    (input: [k]input_type) (expected: [k][n]t) (weights: (cw, rw))
     : t =
       let forward = network.forward
       let output = forward input weights
@@ -182,6 +183,29 @@ module neural_network (R:real) = {
       let output = flatten_to kn output
       let loss = loss_function kn output (flatten_to kn expected)
       in loss
+
+  def argmax [n] (input: [n]t) : i64 =
+    reduce (\acc_i i -> if R.(input[acc_i] > input[i]) then acc_i else i) 0 (iota n)
+
+  -- TODO: make more generic
+  def accuracy 'cw 'rw 'input_type [k] [n]
+    (input: input_type)
+    (labels: [k][n]t)
+    (_activation)
+    (network: nn_type shape_1d input_type ([k][n]t) cw rw)
+    : t =
+      -- TODO: make more generic
+      let labels = map (argmax) labels
+      -- get the output from forward propagation
+      let output = forward input network
+      -- TODO: apply actiation
+      -- find predicted values
+      let predictions = map (argmax) output
+      -- find the number of hits
+      let hits_array = map2 (\prediction label -> i64.bool (prediction == label)) predictions labels
+      let hits = i64.sum hits_array
+      in R.(i64 hits / i64 n)
+
 
   def train 'shape 'input 'output_type 'cw 'rw 'o_options
     (input: input)

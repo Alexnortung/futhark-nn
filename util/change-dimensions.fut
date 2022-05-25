@@ -27,7 +27,7 @@ module change_dimensions = {
     ) (iota k)
 
   -- TODO: make sure that mn is always inferred correctly
-  def from_2d_to_1d [k] [m] [n] [mn] 't (input: [k][m][n]t) : [k][mn]t =
+  def from_2d_to_1d [k] [m] [n] 't (mn: i64) (input: [k][m][n]t) : [k][mn]t =
     map (\b ->
       map (\i ->
         let y = i / n
@@ -36,7 +36,7 @@ module change_dimensions = {
       ) (iota mn)
     ) (iota k)
 
-  def from_3d_to_1d [k] [l] [m] [n] [lmn] 't (input: [k][l][m][n]t) : [k][lmn]t =
+  def from_3d_to_1d [k] [l] [m] [n] 't (lmn: i64) (input: [k][l][m][n]t) : [k][lmn]t =
     map (\b ->
       map (\i ->
         let mn = m * n
@@ -48,8 +48,8 @@ module change_dimensions = {
       ) (iota lmn)
     ) (iota k)
 
-  def from_3d_to_1d [k] [l] [m] [n] [out_m] [out_n] 't (input: [k][l][m][n]t) : [k][out_m][out_n]t =
-    from_3d_to_1d input
-    |> from_1d_to_2d out_m out_n input
+  def from_3d_to_2d [k] [l] [m] [n] 't (out_m: i64) (out_n: i64) (input: [k][l][m][n]t) : [k][out_m][out_n]t =
+    from_3d_to_1d (l * m * n) input
+    |> from_1d_to_2d out_m out_n
 
 }

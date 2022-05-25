@@ -21,7 +21,7 @@ module linear (R:real) = {
 
   def forward  [k] [m] [n] -- k batches, m input nodes and n output nodes
     (input: input_type [k] [m]) -- the values of the input nodes
-    (activation_func: t -> t)
+    (activation_func: activation_type t)
     (weights: weights_type [m] [n])
     (biases: bias_type [n])
     : output_type [k] [n] =
@@ -31,7 +31,7 @@ module linear (R:real) = {
         let biased = map2 (\x b -> R.(x + b)) propagated biases
         --let biased = map2 (\xrow b -> map (\x -> R.(x + b)) xrow) propagated biases
         -- apply the activation function on each output node
-        let activated = map (\x -> activation_func x) biased
+        let activated = activation_func n biased
         in activated
       ) input
 
@@ -52,11 +52,11 @@ module linear (R:real) = {
       in (new_weights, new_bias)
     
 
-  def init [k] (m: i64) (n: i64) (activation_func: t -> t) (seed: i32) : linear_layer_type [k] [m] [n] =
+  def init [k] (m: i64) (n: i64) (activation_func: activation_type t) (seed: i32) : linear_layer_type [k] [m] [n] =
     let weights = wi.gen_2d n m seed
     let biases = wi.gen_1d n seed
     -- make a function that represents the forward function, but only needs an input
-    let forward_weights = (\_ input (weights, biases) -> forward input activation_func weights biases)
+    let forward_weights = (\_ input (weights, biases) -> forward input (activation_func) weights biases)
     in {
       apply_optimize,
       forward = forward_weights,
@@ -79,6 +79,8 @@ module linear (R:real) = {
 -- TESTS
 
 local module test_linear = linear f64
+local module act = import "../util/activation-func"
+local module act = act.activation_func f64
 
 -- ==
 -- entry: linear_forward linear_init_forward
@@ -100,11 +102,11 @@ local module test_linear = linear f64
 --         ]}
 
 entry linear_forward [k] (input: [k][]f64) w b : [k][]f64 =
-  let output = test_linear.forward input (\x -> x) w b
+  let output = test_linear.forward input (act.identity) w b
   in output
 
 entry linear_init_forward [k] [m] [n] (input: [k][m]f64) (w: [n][m]f64) (b: [n]f64) : [k][n]f64 =
-  test_linear.init m n (\x -> x) 1
+  test_linear.init m n (act.identity) 1
   |> test_linear.set_weights w
   |> test_linear.set_bias b
   |> test_linear.forward_layer input

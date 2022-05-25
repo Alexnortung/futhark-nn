@@ -51,9 +51,11 @@ module convolutional (R:real) = {
             ) batch
             |> R.(sum)
             |> R.((+) bias_channel)
-            |> activation_func
           ) xs
         ) filter_weights bias
+        |> flatten
+        ---- |> activation_func (out_channels * output_n)
+        |> unflatten out_channels output_n
       ) input
 
   def forward_2d [k] [in_channels] [out_channels] [m] [n] [a] [b] -- k batches, m times n input nodes and a times b filter size
@@ -81,10 +83,12 @@ module convolutional (R:real) = {
               ) batch
               |> R.(sum)
               |> R.((+) bias_channel)
-              |> activation_func
             ) ys
           ) xs
         ) filter_weights bias
+        |> flatten_3d
+        ---- |> activation_func (out_channels * output_m * output_n)
+        |> unflatten_3d out_channels output_m output_n
       ) input
 
   def apply_optimize_1d [out_channels] [n]
@@ -194,6 +198,8 @@ module convolutional (R:real) = {
 -- TESTS
 
 local module test_conv = convolutional f64
+local module act = import "../util/activation-func"
+local module act = act.activation_func f64
 
 -- ==
 -- entry: conv conv_layer
@@ -219,10 +225,10 @@ local module test_conv = convolutional f64
 -- }
 
 entry conv [k] (input: [k][][3][3]f64) (bias: []f64) (weights: [][2][2]f64) : [k][][2][2]f64 =
-  test_conv.forward_2d 2 2 input (id) bias weights
+  test_conv.forward_2d 2 2 input (act.identity) bias weights
 
 entry conv_layer [k] [a] [b] (input: [k][][][]f64) (bias: []f64) (weights: [][a][b]f64) : [k][][][]f64 =
-  test_conv.init_2d 2 2 1 1 a b (id) 1
+  test_conv.init_2d 2 2 1 1 a b (act.identity) 1
   |> test_conv.set_bias bias
   |> test_conv.set_weights weights
   |> test_conv.forward_layer input
@@ -255,13 +261,13 @@ entry conv_layer [k] [a] [b] (input: [k][][][]f64) (bias: []f64) (weights: [][a]
 --    [[[[44.000000f64]], [[77.000000f64]]]]
 -- }
 entry conv_layer_channels [k] (input: [k][2][2][2]f64) (bias: [2]f64) (weights: [2][2][2]f64) : [k][2][1][1]f64 =
-  test_conv.init_2d 1 1 2 2 2 2 (id) 1
+  test_conv.init_2d 1 1 2 2 2 2 (act.identity) 1
   |> test_conv.set_bias bias
   |> test_conv.set_weights weights
   |> test_conv.forward_layer input
 
 entry conv_1d (input: [][][]f64) (bias: []f64) (weights: [][]f64) : [][][]f64 =
-  test_conv.init_1d 2 2 2 1 (id) 1
+  test_conv.init_1d 2 2 2 1 (act.identity) 1
   |> test_conv.set_bias bias
   |> test_conv.set_weights weights
   |> test_conv.forward_layer input
