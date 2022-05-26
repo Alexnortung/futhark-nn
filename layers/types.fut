@@ -16,7 +16,7 @@ type^ optimizer_apply_record 't = {
 type^ optimizer_loss_function 'input 'output 'weights 't = input -> output -> weights -> t -- the loss function for the optimizer
 
 -- types from layer.init
-type^ layer_fwd_type 'options 'layer_input 'wb 'out = options -> layer_input -> wb -> out
+type^ layer_fwd_type 'options 'layer_input 'wb 'out = (k: i64) -> options -> [k]layer_input -> wb -> [k]out
 type^ layer_apply_optimize_type 't 'options 'weights = options -> optimizer_apply_record t -> weights -> weights -> weights
 type^ layer_type 't 'options 'layer_input 'wb 'shape 'out = {
   forward: layer_fwd_type options layer_input wb out,
@@ -30,7 +30,7 @@ type^ layer_type 't 'options 'layer_input 'wb 'shape 'out = {
 type^ nn_type 't 'shape_type 'input 'output 'current_weight 'rest_weights = {
   seed: i32,
   shape: shape_type,
-  forward: input -> (current_weight, rest_weights) -> output,
+  forward: (k: i64) -> [k]input -> (current_weight, rest_weights) -> [k]output,
   apply_optimize: (optimizer_apply_record t) -> (current_weight, rest_weights) -> (current_weight, rest_weights) -> (current_weight, rest_weights),
   weights: (current_weight, rest_weights)
 }

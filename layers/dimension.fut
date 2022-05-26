@@ -1,7 +1,10 @@
 import "../util/change-dimensions"
 import "types"
+import "layer_base"
 
 module dimension (R:real) = {
+  open layer_base
+
   type options = ()
 
   type^ dimension_layer 'from_size 'to_size 'shape = layer_type R.t options from_size () shape to_size
@@ -10,50 +13,45 @@ module dimension (R:real) = {
   def weights = ()
   def apply_optimize (_options) (_) (w) (_wg) = w
 
-  def from_1d_2d [k] [n] 't (output_m: i64) (output_n: i64) : dimension_layer ([k][n]t) ([k][output_m][output_n]t) shape_2d =
-    let forward (_options) (input: [k][n]t) (_weights) : ([k][output_m][output_n]t) =
+  def from_1d_2d [n] 't (output_m: i64) (output_n: i64) : dimension_layer ([n]t) ([output_m][output_n]t) shape_2d =
+    let forward (k: i64) (_options) (input: [k][n]t) (_weights) : ([k][output_m][output_n]t) =
       change_dimensions.from_1d_to_2d output_m output_n input
     in {
       forward, options, weights, apply_optimize,
       shape = (output_m, output_n)
     }
 
-  def from_1d_3d [k] [n] 't (output_l: i64) (output_m: i64) (output_n: i64) : dimension_layer ([k][n]t) ([k][output_l][output_m][output_n]t) shape_3d =
-    let forward (_options) (input: [k][n]t) (_weights) : ([k][output_l][output_m][output_n]t) =
+  def from_1d_3d [n] 't (output_l: i64) (output_m: i64) (output_n: i64) : dimension_layer ([n]t) ([output_l][output_m][output_n]t) shape_3d =
+    let forward (k: i64) (_options) (input: [k][n]t) (_weights) : ([k][output_l][output_m][output_n]t) =
       change_dimensions.from_1d_to_3d output_l output_m output_n input
     in {
       forward, options, weights, apply_optimize,
       shape = (output_l, output_m, output_n)
     }
 
-  def from_2d_1d [k] [m] [n] 't (mn: i64) : dimension_layer ([k][m][n]t) ([k][mn]t) shape_1d =
-    let forward (_options) (input: [k][m][n]t) (_weights) =
+  def from_2d_1d [m] [n] 't (mn: i64) : dimension_layer ([m][n]t) ([mn]t) shape_1d =
+    let forward (k: i64) (_options) (input: [k][m][n]t) (_weights) =
       change_dimensions.from_2d_to_1d mn input
     in {
       forward, options, weights, apply_optimize,
       shape = mn
     }
 
-  def from_3d_1d [k] [l] [m] [n] 't (lmn: i64) : dimension_layer ([k][l][m][n]t) ([k][lmn]t) shape_1d =
-    let forward (_options) (input: [k][l][m][n]t) (_weights) =
+  def from_3d_1d [l] [m] [n] 't (lmn: i64) : dimension_layer ([l][m][n]t) ([lmn]t) shape_1d =
+    let forward (k: i64) (_options) (input: [k][l][m][n]t) (_weights) =
       change_dimensions.from_3d_to_1d lmn input
     in {
       forward, options, weights, apply_optimize,
       shape = lmn
     }
 
-  def from_3d_2d [k][l][m][n] 't (out_m: i64) (out_n: i64) : dimension_layer ([k][l][m][n]t) ([k][out_m][out_n]t) shape_2d =
-    let forward (_options) (input: [k][l][m][n]t) (_weights) =
+  def from_3d_2d [l][m][n] 't (out_m: i64) (out_n: i64) : dimension_layer ([l][m][n]t) ([out_m][out_n]t) shape_2d =
+    let forward (k: i64) (_options) (input: [k][l][m][n]t) (_weights) =
       change_dimensions.from_3d_to_2d out_m out_n input
     in {
       forward, options, weights, apply_optimize,
       shape = (out_m, out_n)
     }
-    
-
-  def forward_layer (input) (layer) =
-    let { forward, apply_optimize, options, weights, shape = _ } = layer
-    in forward options input weights
 }
 
 -- TESTS

@@ -25,10 +25,10 @@ module neural_network (R:real) = {
   module activation = activation_func R
   module loss = loss R
 
-  def compose_forward 'input_type 'prev_wbs 'layer_input 'current_wbs 'output
-    (prev_forward: input_type -> prev_wbs -> layer_input)
-    (layer_forward: layer_input -> current_wbs -> output)
-    (input: input_type)
+  def compose_forward [k] 'input_type 'prev_wbs 'layer_input 'current_wbs 'output
+    (prev_forward: [k]input_type -> prev_wbs -> [k]layer_input)
+    (layer_forward: [k]layer_input -> current_wbs -> [k]output)
+    (input: [k]input_type)
     (wbs: (current_wbs, prev_wbs)) =
       let (current_wb, prev_wbs) = wbs
       let prev_result = prev_forward input prev_wbs
@@ -47,10 +47,10 @@ module neural_network (R:real) = {
       in (current_applied, prev_applied)
 
 
-  def init_forward (x) _ = x
+  def init_forward 'input_type (k: i64) (x: [k]input_type) _ : [k]input_type = x
   def init_apply_optimize (_apply) (w) (_wg) = w
 
-  def init_1d [k] (n: i64) (seed: i32) : nn_type shape_1d ([k][n]t) ([k][n]t) () () =
+  def init_1d (n: i64) (seed: i32) : nn_type shape_1d ([n]t) ([n]t) () () =
     {
       seed,
       shape = n,
@@ -59,7 +59,7 @@ module neural_network (R:real) = {
       weights = ((), ())
     }
 
-  def init_2d [k] (m: i64) (n: i64) (seed: i32) : nn_type shape_2d ([k][m][n]t) ([k][m][n]t) () () =
+  def init_2d (m: i64) (n: i64) (seed: i32) : nn_type shape_2d ([m][n]t) ([m][n]t) () () =
     {
       seed,
       shape = (m, n),
@@ -68,7 +68,7 @@ module neural_network (R:real) = {
       weights = ((), ())
     }
 
-  def init_3d [k] (l: i64) (m: i64) (n: i64) (seed: i32) : nn_type shape_3d ([k][l][m][n]t) ([k][l][m][n]t) () () =
+  def init_3d (l: i64) (m: i64) (n: i64) (seed: i32) : nn_type shape_3d ([l][m][n]t) ([l][m][n]t) () () =
     {
       seed,
       shape = (l, m, n),
@@ -77,7 +77,7 @@ module neural_network (R:real) = {
       weights = ((), ())
     }
 
-  def init_4d [k] (o: i64) (l: i64) (m: i64) (n: i64) (seed: i32) : nn_type shape_4d ([k][o][l][m][n]t) ([k][o][l][m][n]t) () () =
+  def init_4d (o: i64) (l: i64) (m: i64) (n: i64) (seed: i32) : nn_type shape_4d ([o][l][m][n]t) ([o][l][m][n]t) () () =
     {
       seed,
       shape = (o, l, m, n),
@@ -98,7 +98,7 @@ module neural_network (R:real) = {
       shape = layer_shape
     } = layer
     let { shape = _, apply_optimize, weights, forward, seed } = network
-    let new_forward = compose_forward forward (layer_forward layer_options)
+    let new_forward = (\k -> compose_forward (forward k) (layer_forward k layer_options))
     let new_apply_optimize = compose_apply_optimize apply_optimize (layer_apply_optimize layer_options)
     in {
       seed,
@@ -109,36 +109,36 @@ module neural_network (R:real) = {
     }
 
   def conv_2d 'input_type 'prev_current_weight 'prev_rest_weight 'current_weight
-    [k] [prev_m] [prev_n] [in_channels]
+    [prev_m] [prev_n] [in_channels]
     (output_m: i64)
     (output_n: i64)
     (out_channels: i64)
     (kernel_m: i64)
     (kernel_n: i64)
     (activation_func: activation_type t)
-    (network: nn_type shape_3d input_type ([k][in_channels][prev_m][prev_n]t) prev_current_weight prev_rest_weight)
-    : nn_type shape_3d input_type (layers.convolutional.batch_2d [k] [out_channels] [output_m] [output_n]) (layers.convolutional.weight_bias_2d [out_channels] [kernel_m] [kernel_n]) (prev_current_weight, prev_rest_weight)
+    (network: nn_type shape_3d input_type ([in_channels][prev_m][prev_n]t) prev_current_weight prev_rest_weight)
+    : nn_type shape_3d input_type ([out_channels][output_m][output_n]t) (layers.convolutional.weight_bias_2d [out_channels] [kernel_m] [kernel_n]) (prev_current_weight, prev_rest_weight)
     =
       let seed = network.seed
       let layer = layers.convolutional.init_2d output_m output_n in_channels out_channels kernel_m kernel_n activation_func seed
       in add_layer layer network
 
   def linear 'rest_weights 'input_type 'prev_current_weight 'prev_rest_weight
-    [k] [m]
+    [m]
     (n: i64)
     (activation: activation_type t)
-    (network: nn_type shape_1d input_type (layers.linear.input_type [k] [m]) prev_current_weight prev_rest_weight)
-    : nn_type shape_1d input_type (layers.linear.output_type [k] [n]) (layers.linear.weights_and_bias [m] [n]) (prev_current_weight, prev_rest_weight) =
+    (network: nn_type shape_1d input_type ([m]t) prev_current_weight prev_rest_weight)
+    : nn_type shape_1d input_type ([n]t) (layers.linear.weights_and_bias [m] [n]) (prev_current_weight, prev_rest_weight) =
       let seed = network.seed
       let layer = layers.linear.init m n activation seed
       in add_layer layer network
 
   def maxpool_2d 'input_type  'prev_current_weight 'prev_rest_weight 'current_weight
-    [k] [prev_m] [prev_n]
+    [prev_m] [prev_n]
     (output_m: i64)
     (output_n: i64)
-    (network: nn_type shape_2d input_type ([k][prev_m][prev_n]t) prev_current_weight prev_rest_weight)
-    : nn_type shape_2d input_type ([k][output_m][output_n]t) () (prev_current_weight, prev_rest_weight)
+    (network: nn_type shape_2d input_type ([prev_m][prev_n]t) prev_current_weight prev_rest_weight)
+    : nn_type shape_2d input_type ([output_m][output_n]t) () (prev_current_weight, prev_rest_weight)
     =
       let layer = layers.maxpool.init_2d output_m output_n
       in add_layer layer network
@@ -168,17 +168,17 @@ module neural_network (R:real) = {
       weights = new_weights
     }
 
-  def forward 'input_type 'all_shapes 'output 'cw 'rw (input: input_type) (network: nn_type all_shapes input_type output cw rw) =
+  def forward 'input_type 'all_shapes 'output 'cw 'rw [k] (input: [k]input_type) (network: nn_type all_shapes input_type output cw rw) =
     let { weights, forward, apply_optimize = _, seed = _, shape = _ } = network
-    in forward input weights
+    in forward k input weights
 
   def make_loss [k] [n] 'input_type 'cw 'rw
     (loss_function: (sz: i64) -> [sz]t -> [sz]t -> t)
-    (network: nn_type shape_1d ([k]input_type) ([k][n]t) cw rw)
+    (network: nn_type shape_1d (input_type) ([n]t) cw rw)
     (input: [k]input_type) (expected: [k][n]t) (weights: (cw, rw))
     : t =
       let forward = network.forward
-      let output = forward input weights
+      let output = forward k input weights
       let kn = k * n
       let output = flatten_to kn output
       let loss = loss_function kn output (flatten_to kn expected)
@@ -189,10 +189,10 @@ module neural_network (R:real) = {
 
   -- TODO: make more generic
   def accuracy 'cw 'rw 'input_type [k] [n]
-    (input: input_type)
+    (input: [k]input_type)
     (labels: [k][n]t)
     (_activation)
-    (network: nn_type shape_1d input_type ([k][n]t) cw rw)
+    (network: nn_type shape_1d (input_type) ([n]t) cw rw)
     : t =
       -- TODO: make more generic
       let labels = map (argmax) labels
@@ -207,13 +207,13 @@ module neural_network (R:real) = {
       in R.(i64 hits / i64 n)
 
 
-  def train 'shape 'input 'output_type 'cw 'rw 'o_options
-    (input: input)
-    (output: output_type) -- aka labels
+  def train [k] 'shape 'input_type 'output_type 'cw 'rw 'o_options
+    (input: [k]input_type)
+    (output: [k]output_type) -- aka labels
     (iterations: i64)
-    (optimizer: optimizer_type t o_options input output_type cw rw)
-    (network: nn_type shape input output_type cw rw)
-    : nn_type shape input output_type cw rw =
+    (optimizer: optimizer_type t o_options ([k]input_type) ([k]output_type) cw rw)
+    (network: nn_type shape input_type output_type cw rw)
+    : nn_type shape input_type output_type cw rw =
       let { loss_function, options = _, apply_gradient } = optimizer
       let initial_weights = network.weights
       let loss = loss_function input output

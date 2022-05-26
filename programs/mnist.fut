@@ -25,7 +25,7 @@ entry main [k] [k_test] (input: [k][1][28][28]f64) (labels: [k]f64) (test_input:
   |> nn.linear 10 (nn.activation.log_softmax)
   -- train the network
   let loss = nn.make_loss (nn.loss.mse false) net
-  let optimizer = nn.optim.sgd.init 0.001 (loss)
-  let net = nn.train input labels 100 optimizer net
+  let optimizer = nn.optim.sgd.init 0.01 (loss)
+  let net = nn.train input labels 50 optimizer net
   in nn.accuracy test_input test_labels (nn.activation.identity) net
   

@@ -1,6 +1,9 @@
 import "types"
+import "layer_base"
 
 module pooling (R:real) = {
+  open layer_base
+
   type t = R.t
 
   type input_1d [n] = [n]t
@@ -14,8 +17,8 @@ module pooling (R:real) = {
   type options_1d = options_type
   type options_2d = options_type
   type options_3d = options_type
-  type^ layer_type_1d [k] [n] [out_n] = layer_type t options_1d (batch_1d [k] [n]) () i64 ([k][out_n]t)
-  type^ layer_type_2d [k] [m] [n] [out_m] [out_n] = layer_type t options_2d (batch_2d [k] [m] [n]) () (i64, i64) ([k][out_m][out_n]t)
+  type^ layer_type_1d [n] [out_n] = layer_type t options_1d (input_1d [n]) () i64 ([out_n]t)
+  type^ layer_type_2d [m] [n] [out_m] [out_n] = layer_type t options_2d (input_2d [m] [n]) () (i64, i64) ([out_m][out_n]t)
 
   def arg_max_1d [n] (input: input_1d [n]) : t =
     R.(reduce (\acc x ->
@@ -66,17 +69,19 @@ module pooling (R:real) = {
         ) xs
       ) input
 
-  def layer_forward_1d [k] [n]
+  def layer_forward_1d [n]
     (output_n: i64)
+    (k: i64)
     (_options: options_1d)
     (input: batch_1d [k] [n])
     (_weights)
     : batch_1d [k] [output_n] =
       forward_1d output_n input
 
-  def layer_forward_2d [k] [m] [n]
+  def layer_forward_2d [m] [n]
     (output_m: i64)
     (output_n: i64)
+    (k: i64)
     (_options: options_2d)
     (input: batch_2d [k] [m] [n])
     (_weights)
@@ -91,21 +96,17 @@ module pooling (R:real) = {
       current_weights
 
 
-  def init_1d [k] [n] (output_n: i64) : layer_type_1d [k] [n] [output_n] =
+  def init_1d [n] (output_n: i64) : layer_type_1d [n] [output_n] =
     { forward = layer_forward_1d output_n,
       apply_optimize,
       options = (), weights = (),
       shape = output_n }
 
-  def init_2d [k] [m] [n] (output_m: i64) (output_n: i64) : layer_type_2d [k] [m] [n] [output_m] [output_n] =
+  def init_2d [m] [n] (output_m: i64) (output_n: i64) : layer_type_2d [m] [n] [output_m] [output_n] =
     { forward = layer_forward_2d output_m output_n,
       apply_optimize,
       options = (), weights = (),
       shape = (output_m, output_n) }
-
-  def forward_layer (input) (layer) =
-    let { forward, options, apply_optimize, weights, shape = _ } = layer
-    in forward options input weights
 
 }
 

@@ -1,8 +1,11 @@
 import "../util/linalg"
 import "../util/weight-initialization"
 import "types"
+import "layer_base"
 
 module convolutional (R:real) = {
+  open layer_base
+
   type t = R.t
 
   type options 'shape = {
@@ -11,14 +14,16 @@ module convolutional (R:real) = {
   }
   type options_1d = options (shape_1d)
   type options_2d = options (shape_2d)
+  type input_1d [channels] [n] = [channels][n]t
+  type input_2d [channels] [m] [n] = [channels][m][n]t
   type batch_1d [k] [channels] [n] = [k][channels][n]t
   type batch_2d [k] [channels] [m] [n] = [k][channels][m][n]t
   type kernel_1d [channels] [a] = [channels][a]t
   type kernel_2d [channels] [a] [b] = [channels][a][b]t
   type weight_bias_1d [channels] [a] = (kernel_1d [channels] [a], [channels]t)
   type weight_bias_2d [channels] [a] [b] = (kernel_2d [channels] [a] [b], [channels]t)
-  type^ layer_type_1d [k] [in_channels] [out_channels] [n] [a] [out_n] = layer_type t options_1d (batch_1d [k] [in_channels] [n]) (weight_bias_1d [out_channels] [a]) shape_2d (batch_1d [k] [out_channels] [out_n])
-  type^ layer_type_2d [k] [in_channels] [out_channels] [m] [n] [a] [b] [out_m] [out_n] = layer_type t options_2d (batch_2d [k] [in_channels] [m] [n]) (weight_bias_2d [out_channels] [a] [b]) shape_3d (batch_2d [k] [out_channels] [out_m] [out_n])
+  type^ layer_type_1d [in_channels] [out_channels] [n] [a] [out_n] = layer_type t options_1d (input_1d [in_channels] [n]) (weight_bias_1d [out_channels] [a]) shape_2d (input_1d [out_channels] [out_n])
+  type^ layer_type_2d [in_channels] [out_channels] [m] [n] [a] [b] [out_m] [out_n] = layer_type t options_2d (input_2d [in_channels] [m] [n]) (weight_bias_2d [out_channels] [a] [b]) shape_3d (input_2d [out_channels] [out_m] [out_n])
 
   module lalg = mk_linalg R
 
@@ -121,33 +126,35 @@ module convolutional (R:real) = {
     let bias = wi.gen_1d out_channels seed
     in (weights, bias)
 
-  def layer_new_forward_1d [k] [in_channels] [out_channels] [n] [a]
+  def layer_new_forward_1d [in_channels] [out_channels] [n] [a]
     (output_n: i64)
     (activation_func: activation_type t)
+    (k: i64)
     (_options: options_1d)
     (input: batch_1d [k] [in_channels] [n])
     (wb: weight_bias_1d [out_channels] [a]) : batch_1d [k] [out_channels] [output_n] =
       let (kernel, bias) = wb
       in forward_1d output_n input activation_func bias kernel
 
-  def layer_new_forward_2d [k] [in_channels] [out_channels] [m] [n] [a] [b]
+  def layer_new_forward_2d [in_channels] [out_channels] [m] [n] [a] [b]
     (output_m: i64)
     (output_n: i64)
     (activation_func: activation_type t)
+    (k: i64)
     (_options: options_2d)
     (input: batch_2d [k] [in_channels] [m] [n])
     (wb: weight_bias_2d [out_channels] [a] [b]) : batch_2d [k] [out_channels] [output_m] [output_n] =
       let (kernel, bias) = wb
       in forward_2d output_m output_n input activation_func bias kernel
 
-  def init_1d [k] [n]
+  def init_1d [n]
     (output_n: i64)
     (in_channels: i64)
     (out_channels: i64)
     (kernel_sz: i64)
     (activation_func: activation_type t)
     (seed: i32)
-    : layer_type_1d [k] [in_channels] [out_channels] [n] [kernel_sz] [output_n] =
+    : layer_type_1d [in_channels] [out_channels] [n] [kernel_sz] [output_n] =
       let forward = layer_new_forward_1d output_n activation_func
       let options = default_options_1d
       let weights = generate_weights_1d seed out_channels kernel_sz
@@ -155,7 +162,7 @@ module convolutional (R:real) = {
            options, weights,
            shape = (out_channels, output_n) }
 
-  def init_2d [k] [m] [n]
+  def init_2d [m] [n]
     (output_m: i64)
     (output_n: i64)
     (in_channels: i64)
@@ -164,7 +171,7 @@ module convolutional (R:real) = {
     (kernel_y: i64)
     (activation_func: activation_type t)
     (seed: i32)
-    : layer_type_2d [k] [in_channels] [out_channels] [m] [n] [kernel_x] [kernel_y] [output_m] [output_n] =
+    : layer_type_2d [in_channels] [out_channels] [m] [n] [kernel_x] [kernel_y] [output_m] [output_n] =
       let forward = layer_new_forward_2d output_m output_n activation_func
       let options = default_options_2d
       let weights = generate_weights_2d seed out_channels kernel_x kernel_y
@@ -187,10 +194,6 @@ module convolutional (R:real) = {
     =
       let { forward, apply_optimize, options, shape, weights = (_, bias)} = layer
       in  { forward, apply_optimize, options, shape, weights = (weights, bias)}
-
-  def forward_layer (input) (layer) =
-    let { forward, apply_optimize = _, options, weights, shape = _ } = layer
-    in forward options input weights
 
   -- TODO: add functions for setting padding and stride
 }

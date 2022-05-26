@@ -2,29 +2,32 @@
 import "../util/linalg"
 import "../util/weight-initialization"
 import "types"
+import "layer_base"
 
 module linear (R:real) = {
+  open layer_base
+
   type t = R.t
   type weights_type [m] [n] = [n][m]t
-  type input_type [k] [m] = [k][m]t
-  type output_type [k] [n] = [k][n]t
+  type input_type [m] = [m]t
+  type batch_type [k] [m] = [k](input_type [m])
   type bias_type [n] = [n]t
   type weights_and_bias [m] [n] = (weights_type [m] [n], bias_type [n])
   type options = ()
   -- type layer_type [k] [m] [n] ((weights_and_bias m n) -> [k][n]t, weights_and_bias m n)
-  type^ linear_layer_fwd [k] [m] [n] = layer_fwd_type () (input_type [k] [m]) (weights_and_bias [m] [n]) (output_type [k] [n])
-  type^ linear_layer_type [k] [m] [n] = layer_type t options (input_type [k] [m]) (weights_and_bias [m] [n]) (i64) (output_type [k] [n])
+  type^ linear_layer_fwd [k] [m] [n] = layer_fwd_type () (batch_type [k] [m]) (weights_and_bias [m] [n]) (batch_type [k] [n])
+  type^ linear_layer_type [m] [n] = layer_type t options (input_type [m]) (weights_and_bias [m] [n]) (i64) (input_type [n])
 
   module lalg = mk_linalg R
 
   module wi = weight_init R
 
   def forward  [k] [m] [n] -- k batches, m input nodes and n output nodes
-    (input: input_type [k] [m]) -- the values of the input nodes
+    (input: batch_type [k] [m]) -- the values of the input nodes
     (activation_func: activation_type t)
     (weights: weights_type [m] [n])
     (biases: bias_type [n])
-    : output_type [k] [n] =
+    : batch_type [k] [n] =
       -- TODO: use matmul instead of map matvecmul_row
       map (\input ->
         let propagated = lalg.matvecmul_row weights input
@@ -35,12 +38,6 @@ module linear (R:real) = {
         in activated
       ) input
 
-  def forward_layer [k] [m] [n] (input: input_type [k] [m]) (layer: linear_layer_type [k] [m] [n]) : output_type [k] [n] =
-    -- take the forward function (layer.0) and apply the input and the weights + bias (layer.1)
-    let { forward, options, weights, apply_optimize = _, shape = _ } = layer
-    let output = forward options input weights
-    in output
-
   def apply_optimize [m] [n]
     (_options: options)
     (apply_func_record: optimizer_apply_record t)
@@ -50,27 +47,36 @@ module linear (R:real) = {
       let new_weights = apply_func_record.apply_2d n m current_weights gradient_weights
       let new_bias = apply_func_record.apply_1d n current_bias gradient_bias
       in (new_weights, new_bias)
-    
 
-  def init [k] (m: i64) (n: i64) (activation_func: activation_type t) (seed: i32) : linear_layer_type [k] [m] [n] =
+  def layer_new_forward [m] [n]
+    (activation_function: activation_type t)
+    (k: i64)
+    (_options: options)
+    (input: batch_type [k] [m])
+    (wb: weights_and_bias [m] [n])
+    : batch_type [k] [n] =
+      let (weights, biases) = wb
+      in forward input activation_function weights biases
+    
+  def init (m: i64) (n: i64) (activation_func: activation_type t) (seed: i32) : linear_layer_type [m] [n] =
     let weights = wi.gen_2d n m seed
     let biases = wi.gen_1d n seed
     -- make a function that represents the forward function, but only needs an input
-    let forward_weights = (\_ input (weights, biases) -> forward input (activation_func) weights biases)
+    let forward = layer_new_forward activation_func
     in {
       apply_optimize,
-      forward = forward_weights,
+      forward = forward,
       weights = (weights, biases),
       options = (),
       shape = n
     }
 
-  def set_weights [k] [m] [n] (new_weights: weights_type [m] [n]) (layer: linear_layer_type [k] [m] [n]) : linear_layer_type [k] [m] [n] =
+  def set_weights [m] [n] (new_weights: weights_type [m] [n]) (layer: linear_layer_type [m] [n]) : linear_layer_type [m] [n] =
     let { forward, apply_optimize, options, shape, weights = (_, biases) } = layer
     let new_layer = { apply_optimize, forward, options, shape, weights = (new_weights, biases) }
     in new_layer
 
-  def set_bias [k] [m] [n] (new_bias: bias_type [n]) (layer: linear_layer_type [k] [m] [n]) : linear_layer_type [k] [m] [n] =
+  def set_bias [m] [n] (new_bias: bias_type [n]) (layer: linear_layer_type [m] [n]) : linear_layer_type [m] [n] =
     let { forward, apply_optimize, options, shape, weights = (weights, _) } = layer
     let new_layer = { apply_optimize, forward, options, shape, weights = (weights, new_bias) }
     in new_layer
