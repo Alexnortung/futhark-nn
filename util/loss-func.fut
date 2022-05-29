@@ -1,3 +1,4 @@
+-- in this module "output" is also known as labels.
 module loss (T: numeric) = {
   type t = T.t
 
