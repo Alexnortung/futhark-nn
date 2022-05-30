@@ -1,4 +1,4 @@
-import "../neural-network/neural-network-new"
+import "../neural-network/neural-network"
 
 module nn = neural_network f64
 

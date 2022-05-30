@@ -1,4 +1,4 @@
-import "../neural-network/neural-network-new"
+import "../neural-network/neural-network"
 import "../util/activation-func"
 import "../layers/convolutional"
 
