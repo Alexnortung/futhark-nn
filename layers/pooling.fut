@@ -21,10 +21,7 @@ module pooling (R:real) = {
   type^ layer_type_2d [m] [n] [out_m] [out_n] = layer_type t options_2d (input_2d [m] [n]) () (i64, i64) ([out_m][out_n]t)
 
   def arg_max_1d [n] (input: input_1d [n]) : t =
-    R.(reduce (\acc x ->
-      if acc > x
-      then acc
-      else x) input[0] input)
+    R.(reduce (max) input[0] input)
 
   def arg_max_2d [m] [n] (input: input_2d [m] [n]) : t =
     -- flatten the slice to one dimensional
