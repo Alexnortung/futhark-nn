@@ -33,7 +33,7 @@ pkgs.stdenvNoCC.mkDerivation {
             | od -An -v --width=1 -t u1 --endian=big --skip-bytes=16 \
             | ${pkgs.jq}/bin/jq -scM '. as $input | [range(0; length; '$ROWS')] | map($input[. : . + '$ROWS']) | . as $input | [range(0; length; '$COLS')] | map($input[. : . + '$COLS']) | map([.])' \
             | ${pkgs.gnused}/bin/sed -E 's/([0-9]+)/\1${numberSuffix}${dataType}/g' \
-            > training-images-futhark
+            > training-images-futhark.json
 
         # training labels
         UNZIPPED="train-labels-idx1-ubyte"
@@ -42,7 +42,7 @@ pkgs.stdenvNoCC.mkDerivation {
             | od -An -v --width=1 -t u1 --endian=big --skip-bytes=8 \
             | ${pkgs.jq}/bin/jq -scM \
             | ${pkgs.gnused}/bin/sed -E 's/([0-9]+)/\1${numberSuffix}${dataType}/g' \
-            > training-labels-futhark
+            > training-labels-futhark.json
 
         # test images
         UNZIPPED="t10k-images-idx3-ubyte"
@@ -51,7 +51,7 @@ pkgs.stdenvNoCC.mkDerivation {
             | od -An -v --width=1 -t u1 --endian=big --skip-bytes=16 \
             | ${pkgs.jq}/bin/jq -scM '. as $input | [range(0; length; '$ROWS')] | map($input[. : . + '$ROWS']) | . as $input | [range(0; length; '$COLS')] | map($input[. : . + '$COLS']) | map([.])' \
             | ${pkgs.gnused}/bin/sed -E 's/([0-9]+)/\1${numberSuffix}${dataType}/g' \
-            > test-images-futhark
+            > test-images-futhark.json
 
         # test labels
         UNZIPPED="t10k-labels-idx1-ubyte"
@@ -60,15 +60,17 @@ pkgs.stdenvNoCC.mkDerivation {
             | od -An -v --width=1 -t u1 --endian=big --skip-bytes=8 \
             | ${pkgs.jq}/bin/jq -scM \
             | ${pkgs.gnused}/bin/sed -E 's/([0-9]+)/\1${numberSuffix}${dataType}/g' \
-            > test-labels-futhark
+            > test-labels-futhark.json
 
-        cat training-images-futhark training-labels-futhark > training-data
-        cat test-images-futhark test-labels-futhark > test-data
+        # cat training-images-futhark training-labels-futhark > training-data
+        # cat test-images-futhark test-labels-futhark > test-data
     '';
 
     installPhase = ''
         mkdir -p $out
-        cp training-data $out/
-        cp test-data $out/
+        cp training-images-futhark.json $out/
+        cp training-labels-futhark.json $out/
+        cp test-images-futhark.json $out/
+        cp test-labels-futhark.json $out/
     '';
 }

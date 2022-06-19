@@ -117,7 +117,7 @@ module neural_network (R:real) = {
     (kernel_n: i64)
     (activation_func: activation_type t)
     (network: nn_type shape_3d input_type ([in_channels][prev_m][prev_n]t) prev_current_weight prev_rest_weight)
-    : nn_type shape_3d input_type ([out_channels][output_m][output_n]t) (layers.convolutional.weight_bias_2d [out_channels] [kernel_m] [kernel_n]) (prev_current_weight, prev_rest_weight)
+    : nn_type shape_3d input_type ([out_channels][output_m][output_n]t) (layers.convolutional.weight_bias_2d [in_channels] [out_channels] [kernel_m] [kernel_n]) (prev_current_weight, prev_rest_weight)
     =
       let seed = network.seed
       let layer = layers.convolutional.init_2d output_m output_n in_channels out_channels kernel_m kernel_n activation_func seed
@@ -224,6 +224,13 @@ module neural_network (R:real) = {
         in new_weights
       let new_network = set_weights optimized_weights network
       in new_network
+
+  -- sets the weight on the latest layer
+  def change_weight 'shape 'input 'output 'cw 'rw (new_weights: cw) (network: nn_type shape input output cw rw) =
+    let { shape, apply_optimize, weights, forward, seed } = network
+    let (_, rest_weights) = weights
+    let new_network_weights = (new_weights, rest_weights)
+    in { shape, apply_optimize, weights = new_network_weights, forward, seed }
 }
 
 -- TESTS
@@ -320,7 +327,7 @@ entry nn_maxpool_2d_test (input: [][][]f64) =
 --         ]
 -- }
 
-entry nn_add_layer_test (input: [][][][]f64 ) (b1: []f64) (w1: [][][]f64) =
+entry nn_add_layer_test (input: [][][][]f64 ) (b1: []f64) (w1: [][][][]f64) =
   let seed = 1
   in nn_test.init_3d 1 3 3 seed
   |> nn_test.add_layer (nn_test.layers.convolutional.init_2d 2 2 1 1 2 2 (nn_test.activation.identity) seed

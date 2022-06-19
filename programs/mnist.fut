@@ -18,9 +18,9 @@ entry main [k] [k_test] (input: [k][1][28][28]f64) (labels: [k]f64) (test_input:
   let net = nn.init_3d 1 28 28 seed
   |> nn.conv_2d 26 26 32 3 3 (nn.activation.relu)
   |> nn.conv_2d 24 24 64 3 3 (nn.activation.relu)
-  |> nn.add_layer (nn.layers.dimension.from_3d_2d 22 (22 * 64))
-  |> nn.maxpool_2d 11 (11 * 64) -- window size 2 2
-  |> nn.add_layer (nn.layers.dimension.from_2d_1d (11 * 11 * 64))
+  |> nn.add_layer (nn.layers.dimension.from_3d_2d 24 (24 * 64))
+  |> nn.maxpool_2d 12 (12 * 64) -- window size 2 2
+  |> nn.add_layer (nn.layers.dimension.from_2d_1d (12 * 12 * 64))
   |> nn.linear 128 (nn.activation.relu)
   |> nn.linear 10 (nn.activation.log_softmax)
   -- train the network
